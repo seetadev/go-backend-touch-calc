@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{.fname}} - Aspiring Investments</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/static/socialcalc.css">
+    <script src="/static/jquery.min.js"></script>
+    <script src="/static/socialcalc-3.js"></script>
+</head>
+<body>
+    <div id="spreadsheet-container">
+        <h1>{{.fname}}</h1>
+        
+        <div id="socialcalc-app">
+            <!-- SocialCalc spreadsheet will be initialized here -->
+        </div>
+        
+        <div id="toolbar">
+            <button onclick="saveSheet()">Save</button>
+            <button onclick="loadSheet()">Load</button>
+            {{if eq .dbLogin 1}}
+            <button onclick="dropboxSync()">Sync to Dropbox</button>
+            {{else}}
+            <button onclick="dropboxLogin()">Login to Dropbox</button>
+            {{end}}
+        </div>
+    </div>
+
+    <script>
+        // Initialize SocialCalc
+        var spreadsheet = new SocialCalc.SpreadsheetControl();
+        spreadsheet.InitializeSpreadsheetControl("socialcalc-app", 0, 0, 0);
+        
+        // Load initial data
+        if ("{{.sheetstr}}" !== "") {
+            spreadsheet.editor.LoadEditorSettings("{{.sheetstr}}");
+        }
+        
+        // Session and app info
+        var sessionId = "{{.sessionid}}";
+        var appName = "{{.fname}}";
+        var sheets = {{.sheets}};
+        
+        function saveSheet() {
+            var data = spreadsheet.CreateSheetSave();
+            $.post('/iwebapp', {
+                action: 'savefile',
+                appname: appName,
+                fname: 'default',
+                data: data
+            }, function(response) {
+                if (response.result === 'ok') {
+                    alert('Sheet saved successfully!');
+                } else {
+                    alert('Failed to save sheet: ' + response.data);
+                }
+            });
+        }
+        
+        function loadSheet() {
+            $.post('/iwebapp', {
+                action: 'getfile',
+                appname: appName,
+                fname: 'default'
+            }, function(response) {
+                if (response.result === 'ok') {
+                    spreadsheet.editor.LoadEditorSettings(response.data);
+                    alert('Sheet loaded successfully!');
+                } else {
+                    alert('Failed to load sheet: ' + response.data);
+                }
+            });
+        }
+        
+        function dropboxLogin() {
+            window.location.href = '/browser/' + appName + '/dropbox?action=dropbox-auth-start';
+        }
+        
+        function dropboxSync() {
+            var data = spreadsheet.CreateSheetSave();
+            $.post('/browser/' + appName + '/dropbox', {
+                action: 'upload',
+                name: appName + '_' + new Date().toISOString() + '.msc',
+                string: data
+            }, function(response) {
+                alert('Sheet synced to Dropbox: ' + response.data);
+            });
+        }
+    </script>
+</body>
+</html>
