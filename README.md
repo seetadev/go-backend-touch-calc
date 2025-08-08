@@ -1,6 +1,6 @@
 # Tornado-Nginx Go Backend
 
-A Go-based conversion of the Python Tornado backend for the Aspiring Investments platform. This backend provides cloud-based spreadsheet and business application services with AWS S3 storage integration.
+A Go-based conversion of the Python Tornado backend for the Aspiring Investments platform. This backend provides cloud-based spreadsheet and business application services with AWS S3 storage integration. We are extending for testing the go-libp2p p2p dapps.
 
 ## Features
 
