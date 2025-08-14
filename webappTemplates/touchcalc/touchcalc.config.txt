@@ -1,0 +1,4 @@
+{
+    "code": "demo",
+    "footers": ["Sheet1", "Sheet2", "Sheet3", "Data", "Charts", "Settings", "Help"]
+}

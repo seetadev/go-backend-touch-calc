@@ -53,7 +53,7 @@ func (s *SESService) SendEmailToMultiple(from string, toAddresses []string, mess
 
 	// Prepare email content
 	content := &types.EmailContent{
-		Simple: &types.SimpleEmailMessage{
+		Simple: &types.Message{
 			Subject: &types.Content{
 				Data:    aws.String(message.Subject),
 				Charset: aws.String(message.Charset),
@@ -100,11 +100,11 @@ func (s *SESService) SendEmailToMultiple(from string, toAddresses []string, mess
 }
 
 func (s *SESService) VerifyEmailAddress(email string) error {
-	input := &sesv2.PutEmailIdentityInput{
+	input := &sesv2.CreateEmailIdentityInput{
 		EmailIdentity: aws.String(email),
 	}
 
-	_, err := s.client.PutEmailIdentity(context.TODO(), input)
+	_, err := s.client.CreateEmailIdentity(context.TODO(), input)
 	if err != nil {
 		return fmt.Errorf("failed to verify email address: %w", err)
 	}
@@ -120,7 +120,14 @@ func (s *SESService) ListVerifiedEmailAddresses() ([]string, error) {
 		return nil, fmt.Errorf("failed to list verified email addresses: %w", err)
 	}
 
-	return result.EmailIdentities, nil
+	emails := make([]string, 0, len(result.EmailIdentities))
+	for _, identity := range result.EmailIdentities {
+		if identity.IdentityType == types.IdentityTypeEmailAddress && identity.IdentityName != nil {
+			emails = append(emails, *identity.IdentityName)
+		}
+	}
+
+	return emails, nil
 }
 
 func (s *SESService) DeleteVerifiedEmailAddress(email string) error {
