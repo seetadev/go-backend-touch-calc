@@ -17,6 +17,11 @@ type Config struct {
 	StaticPath     string
 	UtilPath       string
 	CloudPath      string
+
+	StorageBackend  string
+    MongoURI       string
+    MongoDatabase  string
+    MySQLDSN       string
 }
 
 func Load() *Config {
@@ -33,6 +38,11 @@ func Load() *Config {
 		StaticPath:     getEnv("STATIC_PATH", "./web/static"),
 		UtilPath:       getEnv("UTIL_PATH", "./util"),
 		CloudPath:      getEnv("CLOUD_PATH", "./cloud"),
+
+		StorageBackend: getEnv("STORAGE_BACKEND", "mongodb"),
+        MongoURI:      getEnv("MONGO_URI", "mongodb://localhost:27017"),
+        MongoDatabase: getEnv("MONGO_DATABASE", "touchcalc"),
+        MySQLDSN:      getEnv("MYSQL_DSN", "root:password@tcp(localhost:3306)/touchcalc"),
 	}
 }
 

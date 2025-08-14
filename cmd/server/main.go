@@ -21,6 +21,11 @@ func main() {
 	// Load configuration
 	cfg := config.Load()
 
+	// Debug: Print configuration
+    log.Printf("Storage backend: %s", cfg.StorageBackend)
+    log.Printf("MongoDB URI: %s", cfg.MongoURI)
+    log.Printf("MySQL DSN: %s", cfg.MySQLDSN)
+
 	// Initialize Gin router
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -46,6 +51,7 @@ func main() {
 	}
 
 	log.Printf("Server starting on port %s", port)
+	log.Printf("Storage backend: %s", cfg.StorageBackend)
 	if err := router.Run(":" + port); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
@@ -61,6 +67,7 @@ func setupRoutes(router *gin.Engine, handler *handlers.Handler) {
 		c.JSON(http.StatusOK, gin.H{
 			"status": "healthy",
 			"service": "tornado-nginx-go-backend",
+			"storage": handler.Config.StorageBackend,
 		})
 	})
 
@@ -69,8 +76,11 @@ func setupRoutes(router *gin.Engine, handler *handlers.Handler) {
 	{
 		// Authentication routes
 		api.POST("/iauth", handler.Auth.HandleAuth)
+		api.GET("/login", handler.Auth.HandleLoginGet)
 		api.POST("/login", handler.Auth.HandleLogin)
+		api.GET("/register", handler.Auth.HandleRegisterGet)
 		api.POST("/register", handler.Auth.HandleRegister)
+		api.GET("/logout", handler.Auth.HandleLogout)
 		api.POST("/logout", handler.Auth.HandleLogout)
 		api.GET("/pwreset", handler.Auth.HandlePasswordResetGet)
 		api.POST("/pwreset", handler.Auth.HandlePasswordResetPost)
@@ -88,6 +98,6 @@ func setupRoutes(router *gin.Engine, handler *handlers.Handler) {
 		api.POST("/browser/:param1/dropbox", handler.Dropbox.HandleDropboxPost)
 		
 		// Generic browser verification
-		api.GET("/browser/*filepath", handler.App.HandleGoogleVerification)
+		api.GET("/browser/static/*filepath", handler.App.HandleGoogleVerification)
 	}
 }

@@ -45,7 +45,7 @@ func (h *AuthHandler) HandleAuth(c *gin.Context) {
 	case "register":
 		h.handleRegister(c, req.Email, req.Password)
 	case "logout":
-		h.handleLogout(c)
+		h.HandleLogout(c)
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action"})
 	}
@@ -83,118 +83,187 @@ func (h *AuthHandler) HandleRegister(c *gin.Context) {
 
 // HandleLogout handles logout requests
 func (h *AuthHandler) HandleLogout(c *gin.Context) {
-	h.handleLogout(c)
+    fmt.Printf("DEBUG: Logging out user\n")
+    h.clearCurrentUser(c)
+    
+    // Check if it's a JSON request
+    if c.GetHeader("Content-Type") == "application/json" {
+        c.JSON(http.StatusOK, gin.H{
+            "result": "ok",
+        })
+    } else {
+        c.Redirect(http.StatusFound, "/browser")
+    }
 }
 
 func (h *AuthHandler) handleLogin(c *gin.Context, email, password string) {
-	if !auth.ValidateEmail(email) {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"data":   "usererror",
-			"result": "fail",
-		})
-		return
-	}
+    if !auth.ValidateEmail(email) {
+        if c.GetHeader("Content-Type") == "application/json" {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "data":   "usererror",
+                "result": "fail",
+            })
+        } else {
+            c.HTML(http.StatusBadRequest, "login.html", gin.H{
+                "user": nil,
+                "error": "Please enter a valid email address",
+            })
+        }
+        return
+    }
 
-	authenticated, err := h.service.AuthenticateUser(email, password)
-	if err != nil {
-		exists, _ := h.service.UserExists(email)
-		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"data":   "usererror",
-				"result": "fail",
-			})
-		} else {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"data":   "authfail",
-				"result": "fail",
-			})
-		}
-		return
-	}
+    authenticated, err := h.service.AuthenticateUser(email, password)
+    if err != nil {
+        exists, _ := h.service.UserExists(email)
+        errorMsg := "Authentication failed"
+        if !exists {
+            errorMsg = "User does not exist"
+        }
+        
+        if c.GetHeader("Content-Type") == "application/json" {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "data":   "authfail",
+                "result": "fail",
+            })
+        } else {
+            c.HTML(http.StatusUnauthorized, "login.html", gin.H{
+                "user": nil,
+                "error": errorMsg,
+            })
+        }
+        return
+    }
 
-	if authenticated {
-		h.setCurrentUser(c, email)
-		c.JSON(http.StatusOK, gin.H{
-			"data":   "success",
-			"result": "ok",
-		})
-	} else {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"data":   "authfail",
-			"result": "fail",
-		})
-	}
+    if authenticated {
+        h.setCurrentUser(c, email)
+        if c.GetHeader("Content-Type") == "application/json" {
+            c.JSON(http.StatusOK, gin.H{
+                "data":   "success",
+                "result": "ok",
+            })
+        } else {
+            // Redirect to landing page instead of /browser
+            c.Redirect(http.StatusFound, "/browser")
+        }
+    } else {
+        if c.GetHeader("Content-Type") == "application/json" {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "data":   "authfail",
+                "result": "fail",
+            })
+        } else {
+            c.HTML(http.StatusUnauthorized, "login.html", gin.H{
+                "user": nil,
+                "error": "Invalid email or password",
+            })
+        }
+    }
 }
 
 func (h *AuthHandler) handleRegister(c *gin.Context, email, password string) {
-	if !auth.ValidateEmail(email) {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"data":   "usererror",
-			"result": "fail",
-		})
-		return
-	}
+    fmt.Printf("DEBUG: Starting registration for email: %s\n", email)
+    
+    if !auth.ValidateEmail(email) {
+        fmt.Printf("DEBUG: Email validation failed for: %s\n", email)
+        if c.GetHeader("Content-Type") == "application/json" {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "data":   "usererror",
+                "result": "fail",
+            })
+        } else {
+            c.HTML(http.StatusBadRequest, "register.html", gin.H{
+                "user": nil,
+                "error": "Please enter a valid email address",
+            })
+        }
+        return
+    }
 
-	exists, err := h.service.UserExists(email)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"data":   "error",
-			"result": "fail",
-		})
-		return
-	}
+    fmt.Printf("DEBUG: Checking if user exists: %s\n", email)
+    exists, err := h.service.UserExists(email)
+    if err != nil {
+        fmt.Printf("DEBUG: Error checking if user exists: %v\n", err)
+        if c.GetHeader("Content-Type") == "application/json" {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "data":   "error",
+                "result": "fail",
+            })
+        } else {
+            c.HTML(http.StatusInternalServerError, "register.html", gin.H{
+                "user": nil,
+                "error": "Server error occurred: " + err.Error(),
+            })
+        }
+        return
+    }
 
-	if exists {
-		c.JSON(http.StatusConflict, gin.H{
-			"data":   "userexists",
-			"result": "fail",
-		})
-		return
-	}
+    if exists {
+        fmt.Printf("DEBUG: User already exists: %s\n", email)
+        if c.GetHeader("Content-Type") == "application/json" {
+            c.JSON(http.StatusConflict, gin.H{
+                "data":   "userexists",
+                "result": "fail",
+            })
+        } else {
+            c.HTML(http.StatusConflict, "register.html", gin.H{
+                "user": nil,
+                "error": "User already exists",
+            })
+        }
+        return
+    }
 
-	// Create user directory
-	userDir := []string{"home", "users"}
-	_, err = h.handler.Storage.GetFile(userDir)
-	if err != nil {
-		err = h.handler.Storage.CreateDir(userDir)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"data":   "error",
-				"result": "fail",
-			})
-			return
-		}
-	}
+    fmt.Printf("DEBUG: Creating user: %s\n", email)
+    err = h.service.CreateUser(email, password)
+    if err != nil {
+        fmt.Printf("DEBUG: Error creating user: %v\n", err)
+        if c.GetHeader("Content-Type") == "application/json" {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "data":   "error",
+                "result": "fail",
+            })
+        } else {
+            c.HTML(http.StatusInternalServerError, "register.html", gin.H{
+                "user": nil,
+                "error": "Failed to create user: " + err.Error(),
+            })
+        }
+        return
+    }
 
-	err = h.service.CreateUser(email, password)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"data":   "error",
-			"result": "fail",
-		})
-		return
-	}
+    fmt.Printf("DEBUG: Creating user home directory\n")
+    // Create user home directory and required directories
+    userHomePath := []string{"home", email}
+    err = h.handler.Storage.CreateDir(userHomePath)
+    if err != nil {
+        fmt.Printf("DEBUG: Failed to create user home directory (non-fatal): %v\n", err)
+    }
 
-	// Create user home directory
-	userHomePath := []string{"home", email}
-	err = h.handler.Storage.CreateDir(userHomePath)
-	if err != nil {
-		// Log error but don't fail the registration
-		fmt.Printf("Failed to create user home directory: %v\n", err)
-	}
+    // Create user's securestore directory for application data
+    secureStorePath := []string{"home", email, "securestore"}
+    err = h.handler.Storage.CreateDir(secureStorePath)
+    if err != nil {
+        fmt.Printf("DEBUG: Failed to create securestore directory (non-fatal): %v\n", err)
+    }
 
-	h.setCurrentUser(c, email)
-	c.JSON(http.StatusOK, gin.H{
-		"data":   "success",
-		"result": "ok",
-	})
+    fmt.Printf("DEBUG: Setting current user and completing registration\n")
+    h.setCurrentUser(c, email)
+    if c.GetHeader("Content-Type") == "application/json" {
+        c.JSON(http.StatusOK, gin.H{
+            "data":   "success",
+            "result": "ok",
+        })
+    } else {
+        // Redirect to landing page instead of /browser
+        c.Redirect(http.StatusFound, "/browser")
+    }
+    fmt.Printf("DEBUG: Registration completed successfully for: %s\n", email)
 }
 
-func (h *AuthHandler) handleLogout(c *gin.Context) {
-	h.clearCurrentUser(c)
-	c.JSON(http.StatusOK, gin.H{
-		"result": "ok",
-	})
+func (h *AuthHandler) clearCurrentUser(c *gin.Context) {
+    fmt.Printf("DEBUG: Clearing user cookies\n")
+    c.SetCookie("user", "", -1, "/", "", false, true)
+    c.SetCookie("session", "", -1, "/", "", false, true)
 }
 
 // HandlePasswordResetGet handles GET requests for password reset
@@ -319,14 +388,13 @@ func (h *AuthHandler) HandleLostPassword(c *gin.Context) {
 }
 
 func (h *AuthHandler) setCurrentUser(c *gin.Context, user string) {
-	userJSON, _ := json.Marshal(user)
-	// Set secure cookie
-	c.SetSameSite(http.SameSiteStrictMode)
-	c.SetCookie("user", string(userJSON), 3600*24, "/", "", false, true)
-}
-
-func (h *AuthHandler) clearCurrentUser(c *gin.Context) {
-	c.SetCookie("user", "", -1, "/", "", false, true)
+    fmt.Printf("DEBUG: Setting current user: '%s'\n", user)
+    
+    // Store email directly as cookie value
+    c.SetSameSite(http.SameSiteStrictMode)
+    c.SetCookie("user", user, 3600*24, "/", "", false, true)
+    
+    fmt.Printf("DEBUG: User cookie set successfully\n")
 }
 
 func (h *AuthHandler) generateRandomString(length int) string {
@@ -346,4 +414,40 @@ func (h *AuthHandler) sendLostPasswordEmail(userEmail, dongle, host string) erro
 	// Note: This assumes we have access to the email service and from email
 	// We would need to implement this properly with the actual email service
 	return nil
+}
+
+func (h *AuthHandler) HandleLoginGet(c *gin.Context) {
+    c.HTML(http.StatusOK, "login.html", gin.H{
+        "user": nil,
+        "error": "",
+    })
+}
+
+func (h *AuthHandler) HandleRegisterGet(c *gin.Context) {
+    c.HTML(http.StatusOK, "register.html", gin.H{
+        "user": nil,
+        "error": "",
+    })
+}
+
+// Update getCurrentUser with debugging
+func (h *AuthHandler) getCurrentUser(c *gin.Context) string {
+    userCookie, err := c.Cookie("user")
+    if err != nil {
+        return ""
+    }
+
+    // Handle both JSON format and plain text format
+    if len(userCookie) > 0 && userCookie[0] == '"' && userCookie[len(userCookie)-1] == '"' {
+        // JSON format
+        var user string
+        err = json.Unmarshal([]byte(userCookie), &user)
+        if err != nil {
+            return ""
+        }
+        return user
+    }
+    
+    // Plain text format
+    return userCookie
 }
