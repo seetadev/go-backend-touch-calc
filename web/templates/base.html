@@ -1,0 +1,32 @@
+{{ define "base" }}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <title>{{ .title }}</title>
+  <link rel="stylesheet" href="/static/screen.css" type="text/css" />
+</head>
+<body>
+  <div class="container">
+    <hr class="space" />
+    <h2><a href="/">Aspiring Investments</a></h2>
+    <hr />
+    {{ block "content" . }}{{ end }}
+    <hr class="space" />
+    <hr />
+  </div>
+</body>
+</html>
+{{ end }}
+
+      <div>
+        <p class="last" align="center">
+          <a href="/">About</a> &nbsp | &nbsp <a href="/">Feedback</a> &nbsp |
+          &nbsp
+          <a href="/">FAQ</a>
+        </p>
+        <p class="small" align="center">&copy; 2011</p>
+      </div>
+    </div>
+  </body>
+</html>

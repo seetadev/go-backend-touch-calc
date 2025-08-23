@@ -1,0 +1,13 @@
+{{ define "content" }}
+<form method="POST" action="/register">
+  <center>
+    Email: <input type="text" name="email" size="20" /><br />
+    Password: <input type="password" name="password" size="15" /><br />
+    Retype Password: <input type="password" name="repassword" size="15" /><br />
+    <br />
+    <input type="submit" value="Register" />
+  </center>
+</form>
+{{ end }}
+
+{{ template "base" . }}
