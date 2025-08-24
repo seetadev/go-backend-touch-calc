@@ -56,7 +56,6 @@ func (h *DropboxHandler) HandleDropboxGet(c *gin.Context) {
 }
 
 func (h *DropboxHandler) HandleDropboxPost(c *gin.Context) {
-	param1 := c.Param("param1")
 	sessionID, _ := c.Cookie("session")
 	session := h.handler.Session.GetOrCreate(sessionID)
 
