@@ -1,0 +1,8 @@
+A1:TouchCalc Spreadsheet
+B1:Welcome to your cloud spreadsheet!
+A2:Cell A2
+B2:Cell B2
+C2:=A2+B2
+A3:Data automatically saves to the cloud
+B3:Storage Backend:
+C3:MongoDB/MySQL/S3
