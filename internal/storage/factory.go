@@ -34,11 +34,24 @@ func NewStorage(cfg *config.Config) (Storage, error) {
             return nil, fmt.Errorf("AWS credentials required for S3 storage")
         }
         log.Printf("Attempting to connect to AWS S3 bucket: %s", cfg.S3Bucket)
-        storage, err := NewS3Storage(cfg.S3Bucket)
+        storage, err := NewS3Storage(cfg.S3Bucket, "", cfg.AWSAccessKey, cfg.AWSSecretKey, cfg.AWSRegion, false)
         if err != nil {
             return nil, fmt.Errorf("failed to initialize S3 storage: %w", err)
         }
         log.Printf("Successfully connected to AWS S3")
+        return storage, nil
+        
+    case "minio":
+        if cfg.MinIOAccessKey == "" || cfg.MinIOSecretKey == "" {
+            return nil, fmt.Errorf("MinIO credentials required for MinIO storage")
+        }
+        log.Printf("Attempting to connect to MinIO at: %s, bucket: %s", cfg.MinIOEndpoint, cfg.MinIOBucket)
+        useSSL := cfg.MinIOSSL == "true"
+        storage, err := NewS3Storage(cfg.MinIOBucket, cfg.MinIOEndpoint, cfg.MinIOAccessKey, cfg.MinIOSecretKey, cfg.AWSRegion, useSSL)
+        if err != nil {
+            return nil, fmt.Errorf("failed to initialize MinIO storage: %w", err)
+        }
+        log.Printf("Successfully connected to MinIO")
         return storage, nil
         
     default:

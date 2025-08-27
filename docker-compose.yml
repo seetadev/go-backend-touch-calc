@@ -15,6 +15,15 @@ services:
       - AWS_REGION=${AWS_REGION:-us-east-1}
       - S3_BUCKET=${S3_BUCKET:-aspiring-cloud-storage}
       - FROM_EMAIL=${FROM_EMAIL:-aspiring.investments@gmail.com}
+      - STORAGE_BACKEND=${STORAGE_BACKEND:-mongodb}
+      - MONGO_URI=${MONGO_URI:-mongodb://mongodb:27017}
+      - MONGO_DATABASE=${MONGO_DATABASE:-touchcalc}
+      - MYSQL_DSN=${MYSQL_DSN:-root:password@tcp(mysql:3306)/touchcalc}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_BUCKET=${MINIO_BUCKET:-touchcalc-storage}
+      - MINIO_SSL=${MINIO_SSL:-false}
     env_file:
       - .env
     volumes:
@@ -22,6 +31,10 @@ services:
       - ./web/templates:/root/web/templates:ro
       - ./web/static:/root/web/static:ro
     restart: unless-stopped
+    depends_on:
+      - mongodb
+      - mysql
+      - minio
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 30s
@@ -45,6 +58,65 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # MongoDB service
+  mongodb:
+    image: mongo:7.0
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=touchcalc
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD","mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MySQL service  
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=touchcalc
+      - MYSQL_USER=touchcalc
+      - MYSQL_PASSWORD=touchcalc
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MinIO service
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+volumes:
+  mongodb_data:
+  mysql_data:
+  minio_data:
 
 networks:
   default:
