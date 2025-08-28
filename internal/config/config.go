@@ -22,6 +22,12 @@ type Config struct {
     MongoURI       string
     MongoDatabase  string
     MySQLDSN       string
+
+	MinIOEndpoint   string
+    MinIOAccessKey  string
+    MinIOSecretKey  string
+    MinIOBucket     string
+    MinIOSSL        string
 }
 
 func Load() *Config {
@@ -43,6 +49,12 @@ func Load() *Config {
         MongoURI:      getEnv("MONGO_URI", "mongodb://localhost:27017"),
         MongoDatabase: getEnv("MONGO_DATABASE", "touchcalc"),
         MySQLDSN:      getEnv("MYSQL_DSN", "root:password@tcp(localhost:3306)/touchcalc"),
+
+		MinIOEndpoint:  getEnv("MINIO_ENDPOINT", "localhost:9000"),
+        MinIOAccessKey: getEnv("MINIO_ACCESS_KEY", "minioadmin"),
+        MinIOSecretKey: getEnv("MINIO_SECRET_KEY", "minioadmin"),
+        MinIOBucket:    getEnv("MINIO_BUCKET", "touchcalc-storage"),
+        MinIOSSL:       getEnv("MINIO_SSL", "false"),
 	}
 }
 

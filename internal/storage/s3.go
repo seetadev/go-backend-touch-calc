@@ -2,12 +2,12 @@ package storage
 
 import (
 	"context"
-	// "encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/c4gt/tornado-nginx-go-backend/internal/models"
 )
@@ -17,13 +17,44 @@ type S3Storage struct {
 	bucketName string
 }
 
-func NewS3Storage(bucketName string) (*S3Storage, error) {
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-	if err != nil {
-		return nil, fmt.Errorf("failed to load AWS config: %w", err)
+func NewS3Storage(bucketName, endpoint, accessKey, secretKey, region string, useSSL bool) (*S3Storage, error) {
+	var cfg aws.Config
+	var err error
+
+	if endpoint != "" {
+		// MinIO configuration
+		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+			if service == s3.ServiceID {
+				return aws.Endpoint{
+					URL:           fmt.Sprintf("%s://%s", map[bool]string{true: "https", false: "http"}[useSSL], endpoint),
+					SigningRegion: region,
+				}, nil
+			}
+			return aws.Endpoint{}, fmt.Errorf("unknown endpoint requested")
+		})
+
+		cfg, err = config.LoadDefaultConfig(context.TODO(),
+			config.WithEndpointResolverWithOptions(customResolver),
+			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
+			config.WithRegion(region),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load MinIO config: %w", err)
+		}
+	} else {
+		// AWS S3 configuration
+		cfg, err = config.LoadDefaultConfig(context.TODO())
+		if err != nil {
+			return nil, fmt.Errorf("failed to load AWS config: %w", err)
+		}
 	}
 
-	client := s3.NewFromConfig(cfg)
+	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		if endpoint != "" {
+			// Force path-style addressing for MinIO
+			o.UsePathStyle = true
+		}
+	})
 
 	return &S3Storage{
 		client:     client,
@@ -119,7 +150,7 @@ func (s *S3Storage) DeleteItem(path string, bucket ...string) error {
 
 func (s *S3Storage) CreateDir(path []string) error {
 	spath := s.pathToString(path)
-	
+
 	// Check if directory already exists
 	exists, err := s.ExistsItem(spath)
 	if err != nil {
@@ -192,7 +223,7 @@ func (s *S3Storage) CreateFile(path []string, data string) error {
 
 	// Update parent directory
 	fileName := path[len(path)-1]
-	
+
 	// Parse parent directory data
 	var filesList []string
 	if parentData, ok := parentItem.Data.([]interface{}); ok {
@@ -202,7 +233,7 @@ func (s *S3Storage) CreateFile(path []string, data string) error {
 			}
 		}
 	}
-	
+
 	filesList = append(filesList, fileName)
 	parentItem.Data = filesList
 
@@ -256,7 +287,7 @@ func (s *S3Storage) DeleteFile(path []string) error {
 		}
 
 		fileName := path[len(path)-1]
-		
+
 		// Parse parent directory data
 		var filesList []string
 		if parentData, ok := parentItem.Data.([]interface{}); ok {
@@ -266,7 +297,7 @@ func (s *S3Storage) DeleteFile(path []string) error {
 				}
 			}
 		}
-		
+
 		parentItem.Data = filesList
 
 		// Save updated parent directory
