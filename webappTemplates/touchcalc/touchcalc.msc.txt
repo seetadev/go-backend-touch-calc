@@ -1,8 +1,10 @@
-A1:TouchCalc Spreadsheet
-B1:Welcome to your cloud spreadsheet!
-A2:Cell A2
-B2:Cell B2
-C2:=A2+B2
-A3:Data automatically saves to the cloud
-B3:Storage Backend:
-C3:MongoDB/MySQL/S3
+# SocialCalc Spreadsheet Control Save
+version:1.5
+part:sheet
+cell:A1:v:Welcome to TouchCalc
+cell:B1:v:Start editing here
+cell:A2:v:This is your spreadsheet
+cell:B2:v:You can edit any cell
+cell:A3:v:Data saves automatically
+sheet:c:5:r:10:tvf:1
+part:end

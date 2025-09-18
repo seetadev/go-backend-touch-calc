@@ -67,6 +67,10 @@ func (h *WebAppHandler) HandleWebApp(c *gin.Context) {
         h.handleBackup(c, user, req)
     case "restore":
         h.handleRestore(c, user, req)
+    case "save":
+        h.handleSocialCalcSave(c, user, req)
+    case "load":
+        h.handleSocialCalcLoad(c, user, req)
     default:
         c.JSON(http.StatusBadRequest, gin.H{
             "data":   "invalid action: " + req.Action,
@@ -637,4 +641,182 @@ func (h *WebAppHandler) getCurrentUser(c *gin.Context) string {
     
     // Plain text format
     return userCookie
+}
+
+// handleSocialCalcSave handles save requests from SocialCalc spreadsheet
+func (h *WebAppHandler) handleSocialCalcSave(c *gin.Context, user string, req WebAppRequest) {
+    // Get additional parameters that SocialCalc sends
+    filename := c.PostForm("filename")
+    content := c.PostForm("content")
+    sessionid := c.PostForm("sessionid")
+    
+    // Use req fields as backup if form params are empty
+    if filename == "" {
+        filename = req.FName
+    }
+    if content == "" {
+        content = req.Content
+    }
+    
+    fmt.Printf("DEBUG: SocialCalc save - filename: %s, user: %s, sessionid: %s\n", 
+        filename, user, sessionid)
+
+    if filename == "" || content == "" {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "data":   "missing filename or content",
+            "result": "fail",
+        })
+        return
+    }
+
+    // Validate session if provided
+    if sessionid != "" {
+        session, exists := h.handler.Session.Get(sessionid)
+        if !exists {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "data":   "invalid session",
+                "result": "fail",
+            })
+            return
+        }
+        
+        // Double check user from session
+        sessionUser, _ := session.GetString("user")
+        if sessionUser != "" && sessionUser != user {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "data":   "session user mismatch",
+                "result": "fail",
+            })
+            return
+        }
+    }
+
+    // Use "touchcalc" as the app name for SocialCalc saves
+    appName := "touchcalc"
+    
+    // Ensure directory structure exists
+    err := h.ensureDirectoryStructure(user, appName)
+    if err != nil {
+        fmt.Printf("DEBUG: Error ensuring directory structure: %v\n", err)
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "data":   "failed to create directory structure: " + err.Error(),
+            "result": "fail",
+        })
+        return
+    }
+
+    // Create file path
+    path := []string{"home", user, "securestore", appName, filename + ".msc"}
+    
+    // Create file data with metadata (compatible with your existing format)
+    fileData := map[string]interface{}{
+        "content": content,
+        "user": user,
+        "app": appName,
+        "filename": filename,
+        "timestamp": fmt.Sprintf("%d", getCurrentTimestamp()),
+        "storage_backend": h.handler.Config.StorageBackend,
+        "type": "socialcalc_spreadsheet",
+    }
+
+    dataJSON, err := json.Marshal(fileData)
+    if err != nil {
+        fmt.Printf("DEBUG: Error marshaling file data: %v\n", err)
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "data":   "failed to encode file data",
+            "result": "fail",
+        })
+        return
+    }
+
+    // Check if file exists and save accordingly
+    _, err = h.handler.Storage.GetFile(path)
+    if err != nil {
+        // File doesn't exist, create it
+        fmt.Printf("DEBUG: Creating new SocialCalc file: %s\n", filename)
+        err = h.handler.Storage.CreateFile(path, string(dataJSON))
+    } else {
+        // File exists, update it
+        fmt.Printf("DEBUG: Updating existing SocialCalc file: %s\n", filename)
+        err = h.handler.Storage.UpdateFile(path, string(dataJSON))
+    }
+
+    if err != nil {
+        fmt.Printf("DEBUG: Error saving SocialCalc file: %v\n", err)
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "data":   "failed to save file: " + err.Error(),
+            "result": "fail",
+        })
+        return
+    }
+
+    fmt.Printf("DEBUG: SocialCalc file saved successfully: %s\n", filename)
+    
+    // Return success response in format SocialCalc expects
+    c.JSON(http.StatusOK, gin.H{
+        "message": "File saved successfully",
+        "filename": filename,
+        "result": "ok",
+        "storage_backend": h.handler.Config.StorageBackend,
+        "timestamp": getCurrentTimestamp(),
+    })
+}
+
+// handleSocialCalcLoad handles load requests from SocialCalc spreadsheet  
+func (h *WebAppHandler) handleSocialCalcLoad(c *gin.Context, user string, req WebAppRequest) {
+    filename := c.PostForm("filename")
+    if filename == "" {
+        filename = req.FName
+    }
+    
+    if filename == "" {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "data":   "missing filename",
+            "result": "fail",
+        })
+        return
+    }
+
+    appName := "touchcalc"
+    path := []string{"home", user, "securestore", appName, filename + ".msc"}
+    
+    item, err := h.handler.Storage.GetFile(path)
+    if err != nil {
+        fmt.Printf("DEBUG: SocialCalc file not found: %s, error: %v\n", filename, err)
+        c.JSON(http.StatusNotFound, gin.H{
+            "data":   "file not found: " + filename,
+            "result": "fail",
+        })
+        return
+    }
+
+    // Extract content from stored data
+    var fileContent string
+    if dataStr, ok := item.Data.(string); ok {
+        var fileData map[string]interface{}
+        if err := json.Unmarshal([]byte(dataStr), &fileData); err == nil {
+            if content, exists := fileData["content"]; exists {
+                if contentStr, ok := content.(string); ok {
+                    fileContent = contentStr
+                } else {
+                    fileContent = dataStr
+                }
+            } else {
+                fileContent = dataStr
+            }
+        } else {
+            fileContent = dataStr
+        }
+    } else {
+        dataBytes, _ := json.Marshal(item.Data)
+        fileContent = string(dataBytes)
+    }
+
+    fmt.Printf("DEBUG: SocialCalc file loaded successfully: %s\n", filename)
+    c.JSON(http.StatusOK, gin.H{
+        "data":   fileContent,
+        "filename": filename,
+        "result": "ok",
+        "storage_backend": h.handler.Config.StorageBackend,
+    })
 }

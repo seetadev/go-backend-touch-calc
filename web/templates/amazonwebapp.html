@@ -1,829 +1,251 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>{{.fname}} - Aspiring Investments</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+  <head>
+    <title>TouchCalc Spreadsheet - {{.fname}}</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- SocialCalc CSS -->
+    <link rel="stylesheet" type="text/css" href="/static/css/socialcalc.css" />
+    <link rel="stylesheet" type="text/css" href="/static/css/screen.css" />
+
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .header {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .header h1 {
-            margin: 0;
-            color: #333;
-        }
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            color: #666;
-        }
-        .user-info a {
-            color: #007bff;
-            text-decoration: none;
-        }
-        #spreadsheet-container {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        #toolbar {
-            background: #f8f9fa;
-            padding: 15px;
-            border-bottom: 1px solid #ddd;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        #toolbar button {
-            padding: 8px 16px;
-            border: 1px solid #ddd;
-            background: white;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 14px;
-        }
-        #toolbar button:hover {
-            background-color: #e9ecef;
-        }
-        #toolbar button.primary {
-            background-color: #007bff;
-            color: white;
-            border-color: #007bff;
-        }
-        #toolbar button.success {
-            background-color: #28a745;
-            color: white;
-            border-color: #28a745;
-        }
-        #toolbar button.warning {
-            background-color: #ffc107;
-            color: #212529;
-            border-color: #ffc107;
-        }
-        #toolbar input {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            min-width: 150px;
-        }
-        .toolbar-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding-right: 15px;
-            border-right: 1px solid #ddd;
-        }
-        .toolbar-group:last-child {
-            border-right: none;
-        }
-        .toolbar-label {
-            font-size: 12px;
-            color: #666;
-            font-weight: bold;
-        }
-        #spreadsheet-grid {
-            overflow: auto;
-            max-height: 500px;
-            min-height: 400px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 0;
-            min-width: 80px;
-            height: 25px;
-        }
-        th {
-            background-color: #f8f9fa;
-            text-align: center;
-            font-weight: bold;
-            font-size: 12px;
-            padding: 5px;
-        }
-        .row-header {
-            background-color: #f8f9fa;
-            text-align: center;
-            font-weight: bold;
-            font-size: 12px;
-            width: 40px;
-            min-width: 40px;
-            max-width: 40px;
-        }
-        .cell-input {
-            width: 100%;
-            height: 100%;
-            border: none;
-            outline: none;
-            padding: 2px 4px;
-            font-size: 12px;
-            background: transparent;
-            box-sizing: border-box;
-        }
-        .cell-input:focus {
-            background: #fff3cd;
-            border: 2px solid #007bff;
-        }
-        .status-bar {
-            background: #f8f9fa;
-            padding: 10px 15px;
-            border-top: 1px solid #ddd;
-            font-size: 14px;
-            color: #666;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .sheet-tabs {
-            background: #f8f9fa;
-            padding: 10px 15px;
-            border-top: 1px solid #ddd;
-            display: flex;
-            gap: 5px;
-        }
-        .sheet-tab {
-            padding: 6px 12px;
-            background: #e9ecef;
-            border: 1px solid #ddd;
-            border-radius: 4px 4px 0 0;
-            cursor: pointer;
-            font-size: 13px;
-            transition: background-color 0.3s;
-        }
-        .sheet-tab.active {
-            background: white;
-            border-bottom: 1px solid white;
-            font-weight: bold;
-        }
-        .message {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 12px 20px;
-            border-radius: 4px;
-            z-index: 1000;
-            min-width: 300px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        .message.success {
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-        }
-        .message.error {
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-        }
-        .message.info {
-            background-color: #cce7ff;
-            border: 1px solid #b3d9ff;
-            color: #004085;
-        }
-        #autoSaveIndicator {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: #6c757d;
-            margin-left: 5px;
-        }
-        #autoSaveIndicator.enabled {
-            background-color: #28a745;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background-color: #f5f5f5;
+      }
+      .header {
+        background-color: #2c3e50;
+        color: white;
+        padding: 10px 20px;
+        margin: -20px -20px 20px -20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .spreadsheet-wrapper {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        width: 100%;
+        overflow-x: auto;
+      }
+      #spreadsheet-container {
+        width: 100% !important;
+        height: 600px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      .status-bar {
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #ecf0f1;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #7f8c8d;
+      }
     </style>
-</head>
-<body>
+
+    <!-- Dependencies -->
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/json2.js"></script>
+
+    <!-- SocialCalc Core (Order is important!) -->
+    <script src="/static/js/socialcalcconstants.js"></script>
+    <script src="/static/js/socialcalcimages.js"></script>
+    <script src="/static/js/socialcalc-3.js"></script>
+    <script src="/static/js/socialcalcspreadsheetcontrol.js"></script>
+    <script src="/static/js/socialcalctableeditor.js"></script>
+    <script src="/static/js/socialcalcworkbook.js"></script>
+    <script src="/static/js/socialcalcworkbookcontrol.js"></script>
+    <script src="/static/js/socialcalcpopup.js"></script>
+    <script src="/static/js/socialcalcviewer.js"></script>
+    <script src="/static/js/socialcalctouch.js"></script>
+  </head>
+  <body>
     <div class="header">
-        <h1>📊 {{.fname}}</h1>
-        <div class="user-info">
-            <span>👤 {{.user}}</span>
-            <span>💾 Storage: {{.storage}}</span>
-            {{if eq .dbLogin 1}}
-                <span>📁 Dropbox: Connected</span>
-            {{else}}
-                <span>📁 Dropbox: Not Connected</span>
-            {{end}}
-            <a href="/browser">← Back to Home</a>
-        </div>
+      <h1>TouchCalc Spreadsheet: {{.fname}}</h1>
+      <div>
+        <span>User: {{.user}}</span>
+        <button
+          onclick="manualSave()"
+          style="
+            margin-left: 20px;
+            padding: 5px 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+          "
+        >
+          Save Now
+        </button>
+      </div>
     </div>
 
-    <div id="spreadsheet-container">
-        <div id="toolbar">
-            <div class="toolbar-group">
-                <span class="toolbar-label">FILE</span>
-                <button onclick="saveSheet()" class="primary">💾 Save</button>
-                <button onclick="loadSheet()">📂 Load</button>
-                <button onclick="newSheet()">📄 New</button>
-                <input type="text" id="filenameInput" placeholder="Enter filename..." value="spreadsheet1.json">
-            </div>
-            
-            <div class="toolbar-group">
-                <span class="toolbar-label">DATA</span>
-                <button onclick="listFiles()">📋 List Files</button>
-                <button onclick="exportSheet()">📤 Export</button>
-                <button onclick="importSheet()">📥 Import</button>
-            </div>
-            
-            <div class="toolbar-group">
-                <span class="toolbar-label">AUTO-SAVE</span>
-                <button id="autoSaveToggle" onclick="toggleAutoSave()" class="warning">🔄 OFF</button>
-                <span id="autoSaveIndicator"></span>
-            </div>
-            
-            {{if eq .dbLogin 1}}
-            <div class="toolbar-group">
-                <span class="toolbar-label">DROPBOX</span>
-                <button onclick="dropboxSync()" class="success">☁️ Sync to Dropbox</button>
-                <button onclick="dropboxList()">📂 List Dropbox</button>
-            </div>
-            {{else}}
-            <div class="toolbar-group">
-                <span class="toolbar-label">DROPBOX</span>
-                <button onclick="dropboxLogin()" class="warning">🔗 Connect Dropbox</button>
-            </div>
-            {{end}}
+    <div class="spreadsheet-wrapper">
+      <div id="spreadsheet-container">
+        <div style="padding: 20px; text-align: center; color: #7f8c8d">
+          Loading SocialCalc spreadsheet...
         </div>
+      </div>
 
-        <div id="spreadsheet-grid">
-            <table id="spreadsheetTable">
-                <thead>
-                    <tr id="headerRow">
-                        <th class="row-header">#</th>
-                        <!-- Column headers will be generated by JavaScript -->
-                    </tr>
-                </thead>
-                <tbody id="spreadsheetBody">
-                    <!-- Rows will be generated by JavaScript -->
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="status-bar">
-            <span id="statusText">Ready | Storage Backend: {{.storage}}</span>
-            <span id="lastSaved"></span>
-        </div>
-
-        <div class="sheet-tabs">
-            {{range $index, $sheet := .sheets}}
-            <div class="sheet-tab {{if eq $index 0}}active{{end}}" onclick="switchSheet('{{$sheet}}')">
-                {{$sheet}}
-            </div>
-            {{end}}
-        </div>
+      <div class="status-bar" id="status-bar">
+        Ready - Auto-save enabled (every 30 seconds)
+      </div>
     </div>
 
-    <script>
-        // Global variables
-        var sessionId = "{{.sessionid}}";
-        var appName = "{{.fname}}";
-        var sheets = {{.sheets}};
-        var currentSheet = "{{index .sheets 0}}";
-        var storageBackend = "{{.storage}}";
-        var autoSaveEnabled = false;
-        var autoSaveTimer;
-        var lastSaveTime = null;
-        var spreadsheetData = {};
-        var ROWS = 50;
-        var COLS = 26;
-        
-        // Initialize application
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeSpreadsheet();
-            loadInitialData();
-            setupAutoSave();
-            updateStatus("Application initialized - Custom Spreadsheet Engine");
-        });
-        
-        function initializeSpreadsheet() {
-            createSpreadsheetGrid();
-            loadInitialData();
-        }
-        
-        function createSpreadsheetGrid() {
-            const headerRow = document.getElementById('headerRow');
-            const tbody = document.getElementById('spreadsheetBody');
-            
-            // Clear existing content
-            headerRow.innerHTML = '<th class="row-header">#</th>';
-            tbody.innerHTML = '';
-            
-            // Create column headers (A-Z, AA-AZ, etc.)
-            for (let i = 0; i < COLS; i++) {
-                const th = document.createElement('th');
-                th.textContent = getColumnName(i);
-                headerRow.appendChild(th);
-            }
-            
-            // Create rows
-            for (let row = 1; row <= ROWS; row++) {
-                const tr = document.createElement('tr');
-                
-                // Row header
-                const rowHeader = document.createElement('td');
-                rowHeader.className = 'row-header';
-                rowHeader.textContent = row;
-                tr.appendChild(rowHeader);
-                
-                // Data cells
-                for (let col = 0; col < COLS; col++) {
-                    const td = document.createElement('td');
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.className = 'cell-input';
-                    input.dataset.row = row;
-                    input.dataset.col = col;
-                    input.dataset.cellRef = getColumnName(col) + row;
-                    
-                    input.addEventListener('input', function() {
-                        const cellRef = this.dataset.cellRef;
-                        spreadsheetData[cellRef] = this.value;
-                        updateStatus(`Modified cell ${cellRef}`);
-                        if (autoSaveEnabled) {
-                            scheduleAutoSave();
-                        }
-                    });
-                    
-                    input.addEventListener('focus', function() {
-                        updateStatus(`Editing cell ${this.dataset.cellRef}`);
-                    });
-                    
-                    td.appendChild(input);
-                    tr.appendChild(td);
-                }
-                
-                tbody.appendChild(tr);
-            }
-        }
-        
-        function getColumnName(index) {
-            let name = '';
-            while (index >= 0) {
-                name = String.fromCharCode(65 + (index % 26)) + name;
-                index = Math.floor(index / 26) - 1;
-            }
-            return name;
-        }
-        
-        function loadInitialData() {
-            // Parse initial data from server template
-            const initialData = "{{.sheetstr}}";
-            if (initialData && initialData.trim() !== "" && initialData !== "undefined") {
-                parseInitialData(initialData);
-            }
-            
-            // Try to load default file after initialization
-            setTimeout(function() {
-                const defaultFile = appName + "_default.json";
-                document.getElementById('filenameInput').value = defaultFile;
-                loadSheet(true); // Silent load
-            }, 1000);
-        }
-        
-        function parseInitialData(data) {
-            const lines = data.split('\n');
-            lines.forEach(line => {
-                const parts = line.split(':');
-                if (parts.length >= 2) {
-                    const cellRef = parts[0].trim();
-                    const value = parts.slice(1).join(':').trim();
-                    setCellValue(cellRef, value);
-                    spreadsheetData[cellRef] = value;
-                }
-            });
-        }
-        
-        function setCellValue(cellRef, value) {
-            const input = document.querySelector(`input[data-cell-ref="${cellRef}"]`);
-            if (input) {
-                input.value = value;
-                spreadsheetData[cellRef] = value;
-            }
-        }
-        
-        function saveSheet(silent) {
-            const filename = document.getElementById('filenameInput').value.trim();
-            if (!filename) {
-                if (!silent) showMessage('Please enter a filename', 'error');
-                return;
-            }
-            
-            if (!silent) updateStatus("Saving spreadsheet...");
-            
-            // Collect all non-empty cells
-            const data = {};
-            Object.keys(spreadsheetData).forEach(cellRef => {
-                if (spreadsheetData[cellRef] && spreadsheetData[cellRef].trim()) {
-                    data[cellRef] = spreadsheetData[cellRef];
-                }
-            });
-            
-            // Make API call
-            fetch('/iwebapp', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    action: 'savefile',
-                    appname: appName,
-                    fname: filename,
-                    data: JSON.stringify(data)
-                })
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.result === 'ok') {
-                    lastSaveTime = new Date();
-                    updateLastSaved();
-                    if (!silent) {
-                        showMessage(`File saved successfully to ${result.storage_backend || storageBackend}!`, 'success');
-                    }
-                    updateStatus(`Saved to ${result.storage_backend || storageBackend}`);
-                } else {
-                    if (!silent) showMessage('Error saving file: ' + (result.data || 'Unknown error'), 'error');
-                    updateStatus("Save failed");
-                }
-            })
-            .catch(error => {
-                console.error('Save error:', error);
-                if (!silent) showMessage('Network error while saving: ' + error.message, 'error');
-                updateStatus("Save failed - network error");
-            });
-        }
-        
-        function loadSheet(silent) {
-            const filename = document.getElementById('filenameInput').value.trim();
-            if (!filename) {
-                if (!silent) showMessage('Please enter a filename', 'error');
-                return;
-            }
-            
-            if (!silent) updateStatus("Loading spreadsheet...");
-            
-            fetch('/iwebapp', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    action: 'getfile',
-                    appname: appName,
-                    fname: filename
-                })
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.result === 'ok') {
-                    try {
-                        // Handle both old and new data formats
-                        let data = result.data;
-                        if (typeof data === 'string') {
-                            try {
-                                const parsed = JSON.parse(data);
-                                if (parsed.content) {
-                                    data = parsed.content; // New format with metadata
-                                } else {
-                                    data = parsed; // Direct JSON data
-                                }
-                            } catch (e) {
-                                // If it's not JSON, treat as legacy format
-                                data = {};
-                            }
-                        }
-                        
-                        // Clear existing data
-                        spreadsheetData = {};
-                        document.querySelectorAll('.cell-input').forEach(input => {
-                            input.value = '';
-                        });
-                        
-                        // Load new data
-                        if (typeof data === 'object') {
-                            Object.keys(data).forEach(cellRef => {
-                                setCellValue(cellRef, data[cellRef]);
-                            });
-                            spreadsheetData = data;
-                        }
-                        
-                        if (!silent) {
-                            showMessage(`File loaded successfully from ${result.storage_backend || storageBackend}!`, 'success');
-                        }
-                        updateStatus(`Loaded from ${result.storage_backend || storageBackend}`);
-                    } catch (error) {
-                        console.error("Error loading data:", error);
-                        if (!silent) showMessage('Error loading spreadsheet data: ' + error.message, 'error');
-                    }
-                } else {
-                    if (!silent && !result.data.includes('not found')) {
-                        showMessage('Error loading file: ' + (result.data || 'File not found'), 'error');
-                    }
-                    updateStatus("File not found");
-                }
-            })
-            .catch(error => {
-                console.error('Load error:', error);
-                if (!silent) showMessage('Network error while loading: ' + error.message, 'error');
-                updateStatus("Load failed - network error");
-            });
-        }
-        
-        function newSheet() {
-            if (confirm('Create a new spreadsheet? This will clear all current data.')) {
-                spreadsheetData = {};
-                document.querySelectorAll('.cell-input').forEach(input => {
-                    input.value = '';
-                });
-                document.getElementById('filenameInput').value = 'new_spreadsheet.json';
-                showMessage('New spreadsheet created', 'success');
-                updateStatus("New spreadsheet ready");
-            }
-        }
-        
-        function listFiles() {
-            updateStatus("Listing files...");
-            
-            fetch('/iwebapp', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    action: 'listdir',
-                    appname: appName
-                })
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.result === 'ok') {
-                    const files = result.data || [];
-                    if (files.length > 0) {
-                        const fileList = files.join(', ');
-                        showMessage(`Files in ${result.storage_backend || storageBackend}: ${fileList}`, 'info');
-                        updateStatus(`Found ${files.length} files`);
-                    } else {
-                        showMessage('No files found in your storage', 'info');
-                        updateStatus("No files found");
-                    }
-                } else {
-                    showMessage('Error listing files: ' + (result.data || 'Unknown error'), 'error');
-                }
-            })
-            .catch(error => {
-                console.error('List files error:', error);
-                showMessage('Network error while listing files: ' + error.message, 'error');
-            });
-        }
-        
-        function exportSheet() {
+    <script type="text/javascript">
+      // Global variables
+      var spreadsheet;
+      var autoSaveInterval;
+
+      function updateStatus(message) {
+        document.getElementById("status-bar").innerHTML = message;
+        console.log("Status:", message);
+      }
+
+      function initializeSocialCalc() {
+        try {
+          updateStatus("Initializing SocialCalc...");
+          // Correct image prefix for SC icons
+          SocialCalc.Constants.defaultImagePrefix = "/static/images/sc-";
+          updateStatus("SocialCalc constants configured...");
+
+          // Create spreadsheet control
+          spreadsheet = new SocialCalc.SpreadsheetControl();
+          spreadsheet.InitializeSpreadsheetControl(
+            "spreadsheet-container",
+            0,
+            0,
+            0
+          );
+          updateStatus("Spreadsheet control created...");
+
+          // Load initial data from server or use default SC format
+          var initialData = `{{.sheetstr}}`;
+          if (
+            initialData &&
+            initialData.trim() !== "" &&
+            initialData !== "{{.sheetstr}}"
+          ) {
             try {
-                const data = JSON.stringify(spreadsheetData, null, 2);
-                const filename = document.getElementById('filenameInput').value.replace(/\.[^/.]+$/, '') + '_export.json';
-                
-                const blob = new Blob([data], { type: 'application/json' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                a.click();
-                window.URL.revokeObjectURL(url);
-                
-                showMessage('Spreadsheet exported to downloads', 'success');
-                updateStatus("Spreadsheet exported");
-            } catch (error) {
-                console.error('Export error:', error);
-                showMessage('Error exporting spreadsheet: ' + error.message, 'error');
+              spreadsheet.sheet.ParseSheetSave(initialData);
+              updateStatus("Initial data loaded...");
+            } catch (e) {
+              console.error("Error parsing saved data:", e);
+              loadDefaultData();
             }
+          } else {
+            loadDefaultData();
+          }
+
+          setupAutosave();
+          updateStatus(
+            "✅ SocialCalc initialized successfully - Ready to use!"
+          );
+        } catch (error) {
+          console.error("Error initializing SocialCalc:", error);
+          updateStatus("❌ Error: " + error.message);
+          document.getElementById("spreadsheet-container").innerHTML =
+            '<div style="padding:20px;color:red;text-align:center;">' +
+            "<h3>Error Loading Spreadsheet</h3>" +
+            "<p>" +
+            error.message +
+            "</p>" +
+            "</div>";
         }
-        
-        function importSheet() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json,.txt';
-            input.onchange = function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        try {
-                            const data = JSON.parse(e.target.result);
-                            
-                            // Clear existing data
-                            spreadsheetData = {};
-                            document.querySelectorAll('.cell-input').forEach(input => {
-                                input.value = '';
-                            });
-                            
-                            // Load imported data
-                            Object.keys(data).forEach(cellRef => {
-                                setCellValue(cellRef, data[cellRef]);
-                            });
-                            
-                            showMessage('File imported successfully', 'success');
-                            updateStatus("File imported");
-                        } catch (error) {
-                            showMessage('Error importing file: ' + error.message, 'error');
-                        }
-                    };
-                    reader.readAsText(file);
-                }
-            };
-            input.click();
+      }
+
+      function loadDefaultData() {
+        // Proper SocialCalc save format
+        var defaultData = `# SocialCalc Spreadsheet Control Save
+version:1.5
+part:sheet
+cell:A1:v:Welcome to TouchCalc
+cell:B1:v:Start editing here
+cell:A2:v:This is your spreadsheet
+cell:B2:v:You can edit any cell
+cell:A3:v:Data saves automatically
+sheet:c:5:r:10:tvf:1
+part:end`;
+        try {
+          spreadsheet.sheet.ParseSheetSave(defaultData);
+          updateStatus("Default content loaded...");
+        } catch (e) {
+          console.error("Error loading default data:", e);
+          updateStatus("Using empty spreadsheet...");
         }
-        
-        function toggleAutoSave() {
-            autoSaveEnabled = !autoSaveEnabled;
-            const button = document.getElementById('autoSaveToggle');
-            const indicator = document.getElementById('autoSaveIndicator');
-            
-            if (autoSaveEnabled) {
-                button.textContent = '🔄 ON';
-                button.className = 'success';
-                indicator.className = 'enabled';
-                showMessage('Auto-save enabled - changes will be saved automatically', 'success');
-            } else {
-                button.textContent = '🔄 OFF';
-                button.className = 'warning';
-                indicator.className = '';
-                if (autoSaveTimer) {
-                    clearTimeout(autoSaveTimer);
-                }
-                showMessage('Auto-save disabled', 'info');
-            }
-            
-            updateStatus(`Auto-save ${autoSaveEnabled ? 'enabled' : 'disabled'}`);
+      }
+
+      function setupAutosave() {
+        autoSaveInterval = setInterval(function () {
+          if (spreadsheet && spreadsheet.sheet) {
+            var sheetData = SocialCalc.CreateSheetSave(spreadsheet.sheet);
+            saveToServer(sheetData, false);
+          }
+        }, 30000);
+        updateStatus("✅ Auto-save enabled (every 30 seconds)");
+      }
+
+      function manualSave() {
+        if (spreadsheet && spreadsheet.sheet) {
+          var sheetData = SocialCalc.CreateSheetSave(spreadsheet.sheet);
+          saveToServer(sheetData, true);
+        } else {
+          updateStatus("❌ Cannot save - spreadsheet not initialized");
         }
-        
-        function setupAutoSave() {
-            // Auto-save every 30 seconds if enabled and there are changes
-            setInterval(function() {
-                if (autoSaveEnabled) {
-                    saveSheet(true); // Silent save
-                }
-            }, 30000);
+      }
+
+      function saveToServer(data, isManual) {
+        var saveType = isManual ? "Manual" : "Auto";
+        updateStatus(saveType + " save in progress...");
+        $.ajax({
+          url: "/iwebapp",
+          method: "POST",
+          data: {
+            action: "save",
+            filename: "{{.fname}}",
+            content: data,
+            sessionid: "{{.sessionid}}",
+          },
+        })
+          .done(function () {
+            updateStatus(
+              "✅ " +
+                saveType +
+                " save successful at " +
+                new Date().toLocaleTimeString()
+            );
+          })
+          .fail(function (xhr, status, error) {
+            console.error("Save failed:", error);
+            updateStatus("❌ " + saveType + " save failed: " + error);
+          });
+      }
+
+      function checkDependencies() {
+        var missing = [];
+        if (typeof $ === "undefined") missing.push("jQuery");
+        if (typeof JSON === "undefined") missing.push("JSON");
+        if (typeof SocialCalc === "undefined") missing.push("SocialCalc");
+        if (missing.length > 0)
+          throw new Error("Missing dependencies: " + missing.join(", "));
+      }
+
+      $(document).ready(function () {
+        try {
+          checkDependencies();
+          initializeSocialCalc();
+        } catch (error) {
+          console.error("Initialization failed:", error);
+          updateStatus("❌ Failed to load: " + error.message);
         }
-        
-        function scheduleAutoSave() {
-            if (autoSaveTimer) {
-                clearTimeout(autoSaveTimer);
-            }
-            autoSaveTimer = setTimeout(function() {
-                if (autoSaveEnabled) {
-                    saveSheet(true);
-                }
-            }, 5000); // Save 5 seconds after last change
-        }
-        
-        function switchSheet(sheetName) {
-            // Update active tab
-            document.querySelectorAll('.sheet-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            currentSheet = sheetName;
-            updateStatus(`Switched to ${sheetName}`);
-            showMessage(`Switched to ${sheetName}`, 'info');
-        }
-        
-        function dropboxLogin() {
-            window.location.href = '/browser/' + appName + '/dropbox?action=dropbox-auth-start';
-        }
-        
-        function dropboxSync() {
-            const filename = document.getElementById('filenameInput').value.trim();
-            if (!filename) {
-                showMessage('Please enter a filename first', 'error');
-                return;
-            }
-            
-            try {
-                const data = JSON.stringify(spreadsheetData);
-                const dropboxFilename = appName + '_' + filename + '_' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
-                
-                fetch('/browser/' + appName + '/dropbox', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        action: 'upload',
-                        name: dropboxFilename,
-                        string: data
-                    })
-                })
-                .then(response => response.json())
-                .then(result => {
-                    showMessage('Sheet synced to Dropbox: ' + dropboxFilename, 'success');
-                    updateStatus("Synced to Dropbox");
-                })
-                .catch(error => {
-                    showMessage('Error syncing to Dropbox', 'error');
-                });
-            } catch (error) {
-                showMessage('Error preparing data for Dropbox sync: ' + error.message, 'error');
-            }
-        }
-        
-        function dropboxList() {
-            fetch('/browser/' + appName + '/dropbox', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    action: 'listdir'
-                })
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.contents && result.contents.length > 0) {
-                    const files = result.contents.map(item => item.name).join(', ');
-                    showMessage('Dropbox files: ' + files, 'info');
-                } else {
-                    showMessage('No files found in Dropbox', 'info');
-                }
-            })
-            .catch(error => {
-                showMessage('Error listing Dropbox files', 'error');
-            });
-        }
-        
-        function updateStatus(message) {
-            document.getElementById('statusText').textContent = message + ` | Storage: ${storageBackend}`;
-        }
-        
-        function updateLastSaved() {
-            if (lastSaveTime) {
-                document.getElementById('lastSaved').textContent = 
-                    'Last saved: ' + lastSaveTime.toLocaleTimeString();
-            }
-        }
-        
-        function showMessage(message, type) {
-            // Remove existing messages
-            const existingMessages = document.querySelectorAll('.message');
-            existingMessages.forEach(msg => msg.remove());
-            
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}`;
-            messageDiv.textContent = message;
-            document.body.appendChild(messageDiv);
-            
-            setTimeout(() => {
-                messageDiv.remove();
-            }, 5000);
-        }
-        
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey) {
-                switch(e.key) {
-                    case 's':
-                        e.preventDefault();
-                        saveSheet();
-                        break;
-                    case 'o':
-                        e.preventDefault();
-                        loadSheet();
-                        break;
-                    case 'n':
-                        e.preventDefault();
-                        newSheet();
-                        break;
-                }
-            }
-        });
-        
-        // Update last saved time every minute
-        setInterval(updateLastSaved, 60000);
+      });
     </script>
-</body>
+  </body>
 </html>
