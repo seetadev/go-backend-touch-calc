@@ -60,6 +60,11 @@ func main() {
 func setupRoutes(router *gin.Engine, handler *handlers.Handler) {
 	// Static files
 	router.Static("/static", "./web/static")
+
+	router.StaticFS("/js", http.Dir("./web/static/js"))
+	router.StaticFS("/css", http.Dir("./web/static/css"))
+	router.StaticFS("/images", http.Dir("./web/static/images"))
+
 	router.LoadHTMLGlob("web/templates/*")
 
 	// Health check endpoint

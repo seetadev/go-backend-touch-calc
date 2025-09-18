@@ -81,12 +81,35 @@ func (h *AppHandler) HandleAmazonWebApp(c *gin.Context) {
 func (h *AppHandler) handleWebAppIndex(c *gin.Context, appName, paramCode, sessionID, user string) {
     mscPath := "webappTemplates/"
     
-    // Read MSC file
-    mscFile := filepath.Join(mscPath, appName, appName+".msc.txt")
-    mscData, err := ioutil.ReadFile(mscFile)
-    if err != nil {
-        // Fallback content if file doesn't exist
-        mscData = []byte("A1:TouchCalc Spreadsheet\nB1:Welcome " + user)
+    // Try to load existing spreadsheet data from storage first
+    var mscData []byte
+    user = h.getCurrentUser(c)
+    if user != "" {
+        // Try to load existing file from storage
+        path := []string{"home", user, "securestore", appName, appName + ".msc"}
+        item, err := h.handler.Storage.GetFile(path)
+        if err == nil && item != nil {
+            if dataStr, ok := item.Data.(string); ok {
+                var fileData map[string]interface{}
+                if err := json.Unmarshal([]byte(dataStr), &fileData); err == nil {
+                    if content, exists := fileData["content"]; exists {
+                        if contentStr, ok := content.(string); ok {
+                            mscData = []byte(contentStr)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // If no stored data found, try file system
+    if len(mscData) == 0 {
+        mscFile := filepath.Join(mscPath, appName, appName+".msc.txt")
+        var err error
+        mscData, err = ioutil.ReadFile(mscFile)
+        if err != nil {
+            mscData = []byte("A1:Welcome to TouchCalc\nB1:Hello " + user + "\nA2:Start editing here\nB2:Your data auto-saves")
+        }
     }
 
     // Read config file
