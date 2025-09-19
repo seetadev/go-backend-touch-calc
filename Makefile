@@ -146,6 +146,42 @@ release: clean deps test
 	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 $(GOBUILD) $(BUILD_FLAGS) -ldflags "$(LDFLAGS)" -o bin/$(BINARY_NAME)-darwin-amd64 cmd/server/main.go
 	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GOBUILD) $(BUILD_FLAGS) -ldflags "$(LDFLAGS)" -o bin/$(BINARY_NAME)-windows-amd64.exe cmd/server/main.go
 
+# LibP2P specific targets
+.PHONY: libp2p-build libp2p-run libp2p-stop setup-redis
+
+# Build LibP2P nodes
+libp2p-build:
+	@echo "Building LibP2P nodes..."
+	cd go-libp2p-node && docker build -t libp2p-node .
+
+# Run with LibP2P integration
+libp2p-run: setup-redis
+	@echo "Starting with LibP2P integration..."
+	docker-compose up --build -d
+	@echo "Waiting for services to start..."
+	sleep 10
+	@echo "Setting up Redis for LibP2P..."
+	chmod +x scripts/redis-setup.sh
+	./scripts/redis-setup.sh
+
+# Setup Redis for LibP2P
+setup-redis:
+	@echo "Setting up Redis..."
+	docker-compose up -d redis
+	sleep 5
+
+# Stop LibP2P services
+libp2p-stop:
+	@echo "Stopping LibP2P services..."
+	docker-compose down
+
+# Test LibP2P connections
+test-libp2p:
+	@echo "Testing LibP2P connections..."
+	docker-compose exec go-libp2p-node-1 ./libp2p-node &
+	sleep 5
+	docker-compose exec go-libp2p-node-2 ./libp2p-node
+
 # Show help
 help:
 	@echo "Available targets:"
