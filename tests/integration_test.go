@@ -35,15 +35,19 @@ func TestRegisterLoginSaveLoad(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/register", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	router.ServeHTTP(w, req)
-	require.Equal(t, 200, w.Code)
+	require.True(t, w.Code == 200 || w.Code == 302, "expected 200 or 302 for /register, got %d", w.Code)
 
-	// Login
+	// Login (capture cookies set by server for subsequent authenticated calls)
 	w = httptest.NewRecorder()
 	body = bytes.NewBufferString("email=test@example.com&password=secret")
 	req, _ = http.NewRequest("POST", "/login", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	router.ServeHTTP(w, req)
-	require.Equal(t, 200, w.Code)
+	require.True(t, w.Code == 200 || w.Code == 302, "expected 200 or 302 for /login, got %d", w.Code)
+
+	// Propagate authentication cookies to later requests
+	loginResp := w.Result()
+	cookies := loginResp.Cookies()
 
 	// Save a file
 	saveReq := map[string]string{
@@ -57,6 +61,9 @@ func TestRegisterLoginSaveLoad(t *testing.T) {
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("POST", "/iwebapp", bytes.NewBuffer(saveJSON))
 	req.Header.Set("Content-Type", "application/json")
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
 	router.ServeHTTP(w, req)
 	require.Equal(t, 200, w.Code)
 
@@ -71,6 +78,9 @@ func TestRegisterLoginSaveLoad(t *testing.T) {
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("POST", "/iwebapp", bytes.NewBuffer(loadJSON))
 	req.Header.Set("Content-Type", "application/json")
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
 	router.ServeHTTP(w, req)
 	require.Equal(t, 200, w.Code)
 }

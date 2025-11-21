@@ -11,6 +11,15 @@ func NewStorage(cfg *config.Config) (Storage, error) {
     log.Printf("Initializing storage backend: %s", cfg.StorageBackend)
     
     switch cfg.StorageBackend {
+	case "sqlite":
+		log.Printf("Attempting to use SQLite with DSN: %s", cfg.SQLiteDSN)
+		storage, err := NewSQLiteStorage(cfg.SQLiteDSN)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize SQLite storage: %w", err)
+		}
+		log.Printf("Successfully initialized SQLite storage")
+		return storage, nil
+
     case "mongodb":
         log.Printf("Attempting to connect to MongoDB at: %s", cfg.MongoURI)
         storage, err := NewMongoStorage(cfg.MongoURI, cfg.MongoDatabase)

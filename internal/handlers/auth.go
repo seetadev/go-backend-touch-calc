@@ -4,11 +4,13 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/c4gt/tornado-nginx-go-backend/internal/auth"
 	"github.com/c4gt/tornado-nginx-go-backend/internal/email"
+	"github.com/c4gt/tornado-nginx-go-backend/internal/storage"
 	"github.com/gin-gonic/gin"
 )
 
@@ -59,7 +61,10 @@ func (h *AuthHandler) HandleLogin(c *gin.Context) {
 	}
 
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		c.HTML(http.StatusBadRequest, "login.html", gin.H{
+			"user":  nil,
+			"error": "Invalid request payload",
+		})
 		return
 	}
 
@@ -97,7 +102,7 @@ func (h *AuthHandler) HandleLogout(c *gin.Context) {
 }
 
 func (h *AuthHandler) handleLogin(c *gin.Context, email, password string) {
-    if !auth.ValidateEmail(email) {
+    if !auth.ValidateEmail(email) || password == "" {
         if c.GetHeader("Content-Type") == "application/json" {
             c.JSON(http.StatusBadRequest, gin.H{
                 "data":   "usererror",
@@ -106,7 +111,7 @@ func (h *AuthHandler) handleLogin(c *gin.Context, email, password string) {
         } else {
             c.HTML(http.StatusBadRequest, "login.html", gin.H{
                 "user": nil,
-                "error": "Please enter a valid email address",
+                "error": "Please enter a valid email address and password",
             })
         }
         return
@@ -142,8 +147,9 @@ func (h *AuthHandler) handleLogin(c *gin.Context, email, password string) {
                 "result": "ok",
             })
         } else {
-            // Redirect to landing page instead of /browser
-            c.Redirect(http.StatusFound, "/browser")
+            // Redirect to primary spreadsheet app after successful login.
+            // Previously: c.Redirect(http.StatusFound, "/browser")
+            c.Redirect(http.StatusFound, "/browser/touchcalc/123/index.html")
         }
     } else {
         if c.GetHeader("Content-Type") == "application/json" {
@@ -163,7 +169,7 @@ func (h *AuthHandler) handleLogin(c *gin.Context, email, password string) {
 func (h *AuthHandler) handleRegister(c *gin.Context, email, password string) {
     fmt.Printf("DEBUG: Starting registration for email: %s\n", email)
     
-    if !auth.ValidateEmail(email) {
+    if !auth.ValidateEmail(email) || password == "" {
         fmt.Printf("DEBUG: Email validation failed for: %s\n", email)
         if c.GetHeader("Content-Type") == "application/json" {
             c.JSON(http.StatusBadRequest, gin.H{
@@ -173,7 +179,7 @@ func (h *AuthHandler) handleRegister(c *gin.Context, email, password string) {
         } else {
             c.HTML(http.StatusBadRequest, "register.html", gin.H{
                 "user": nil,
-                "error": "Please enter a valid email address",
+                "error": "Please enter a valid email address and password",
             })
         }
         return
@@ -182,6 +188,11 @@ func (h *AuthHandler) handleRegister(c *gin.Context, email, password string) {
     fmt.Printf("DEBUG: Checking if user exists: %s\n", email)
     exists, err := h.service.UserExists(email)
     if err != nil {
+        // Treat storage.ErrNotFound as "user does not exist" instead of a hard error.
+        if errors.Is(err, storage.ErrNotFound) {
+            fmt.Printf("DEBUG: User does not exist yet (expected for new registration): %s\n", email)
+            exists = false
+        } else {
         fmt.Printf("DEBUG: Error checking if user exists: %v\n", err)
         if c.GetHeader("Content-Type") == "application/json" {
             c.JSON(http.StatusInternalServerError, gin.H{
@@ -195,6 +206,7 @@ func (h *AuthHandler) handleRegister(c *gin.Context, email, password string) {
             })
         }
         return
+        }
     }
 
     if exists {
@@ -254,14 +266,21 @@ func (h *AuthHandler) handleRegister(c *gin.Context, email, password string) {
             "result": "ok",
         })
     } else {
-        // Redirect to landing page instead of /browser
-        c.Redirect(http.StatusFound, "/browser")
+        // Redirect to primary spreadsheet app after successful registration.
+        // Previously: c.Redirect(http.StatusFound, "/browser")
+        c.Redirect(http.StatusFound, "/browser/touchcalc/123/index.html")
     }
     fmt.Printf("DEBUG: Registration completed successfully for: %s\n", email)
 }
 
 func (h *AuthHandler) clearCurrentUser(c *gin.Context) {
     fmt.Printf("DEBUG: Clearing user cookies\n")
+
+    // Best-effort removal from in-memory session manager.
+    if sessionID, err := c.Cookie("session"); err == nil && sessionID != "" {
+        h.handler.Session.Delete(sessionID)
+    }
+
     c.SetCookie("user", "", -1, "/", "", false, true)
     c.SetCookie("session", "", -1, "/", "", false, true)
 }
@@ -390,11 +409,23 @@ func (h *AuthHandler) HandleLostPassword(c *gin.Context) {
 func (h *AuthHandler) setCurrentUser(c *gin.Context, user string) {
     fmt.Printf("DEBUG: Setting current user: '%s'\n", user)
     
-    // Store email directly as cookie value
+    // Create or reuse a session ID
+    sessionID, err := c.Cookie("session")
+    if err != nil || sessionID == "" {
+        sessionID = h.generateRandomString(32)
+    }
+
+    // Store user in in-memory session manager
+    session := h.handler.Session.GetOrCreate(sessionID)
+    session.SetValue("user", user)
+    h.handler.Session.Set(sessionID, session)
+
+    // Store email directly as cookie value and attach session cookie
     c.SetSameSite(http.SameSiteStrictMode)
     c.SetCookie("user", user, 3600*24, "/", "", false, true)
+    c.SetCookie("session", sessionID, 3600*24, "/", "", false, true)
     
-    fmt.Printf("DEBUG: User cookie set successfully\n")
+    fmt.Printf("DEBUG: User cookie and session set successfully (sessionID=%s)\n", sessionID)
 }
 
 func (h *AuthHandler) generateRandomString(length int) string {

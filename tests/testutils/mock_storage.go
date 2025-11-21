@@ -1,10 +1,10 @@
 package testutils
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/c4gt/tornado-nginx-go-backend/internal/models"
+	"github.com/c4gt/tornado-nginx-go-backend/internal/storage"
 )
 
 type MockStorage struct {
@@ -21,7 +21,12 @@ func (m *MockStorage) pathToString(path []string) string {
 
 func (m *MockStorage) CreateDir(path []string) error {
 	spath := m.pathToString(path)
-	m.data[spath] = `{"path":["` + strings.Join(path, `","`) + `"],"type":"dir","data":[]}`
+	item := models.NewStorageItem(path, "dir", []string{})
+	data, err := item.ToJSON()
+	if err != nil {
+		return err
+	}
+	m.data[spath] = data
 	return nil
 }
 
@@ -32,7 +37,12 @@ func (m *MockStorage) DeleteDir(path []string) error {
 
 func (m *MockStorage) CreateFile(path []string, data string) error {
 	spath := m.pathToString(path)
-	m.data[spath] = data
+	item := models.NewStorageItem(path, "file", data)
+	jsonData, err := item.ToJSON()
+	if err != nil {
+		return err
+	}
+	m.data[spath] = jsonData
 	return nil
 }
 
@@ -40,7 +50,7 @@ func (m *MockStorage) GetFile(path []string) (*models.StorageItem, error) {
 	spath := m.pathToString(path)
 	data, found := m.data[spath]
 	if !found {
-		return nil, errors.New("item not found")
+		return nil, storage.ErrNotFound
 	}
 	return models.StorageItemFromJSON(data)
 }
@@ -64,7 +74,7 @@ func (m *MockStorage) PutItem(path string, data string, bucket ...string) error 
 func (m *MockStorage) GetItem(path string, bucket ...string) (string, error) {
 	v, ok := m.data[path]
 	if !ok {
-		return "", errors.New("item not found")
+		return "", storage.ErrNotFound
 	}
 	return v, nil
 }

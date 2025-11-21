@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -31,6 +32,10 @@ func (s *Service) UserExists(email string) (bool, error) {
 	path := s.getUserPath(email)
 	item, err := s.storage.GetFile(path)
 	if err != nil {
+		// Treat ErrNotFound as "user does not exist" instead of a hard error
+		if errors.Is(err, storage.ErrNotFound) {
+			return false, nil
+		}
 		return false, err
 	}
 	return item != nil, nil
@@ -173,7 +178,14 @@ func (s *Service) setUser(user *models.User) error {
 	return s.storage.UpdateFile(path, userData)
 }
 
-// ValidateEmail performs basic email validation
+// ValidateEmail performs basic email validation.
+// It ensures there is exactly one "@" character and that both the local
+// and domain parts are non-empty (e.g. "a@b" is considered valid, but
+// "@domain.com" or "user@" are not).
 func ValidateEmail(email string) bool {
-	return strings.Contains(email, "@") && len(email) > 3
+	at := strings.Index(email, "@")
+	if at <= 0 || at == len(email)-1 {
+		return false
+	}
+	return true
 }

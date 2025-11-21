@@ -55,9 +55,20 @@ func (h *AppHandler) HandleGoogleVerification(c *gin.Context) {
 
 // HandleAmazonWebApp handles the Amazon web app routes
 func (h *AppHandler) HandleAmazonWebApp(c *gin.Context) {
-    param1 := c.Param("param1")
-    paramCode := c.Param("paramCode")
-    param2 := c.Param("param2")
+    // Support both the new descriptive parameter names (app/code/file)
+    // and the legacy ones (param1/paramCode/param2) for compatibility.
+    appName := c.Param("app")
+    if appName == "" {
+        appName = c.Param("param1")
+    }
+    paramCode := c.Param("code")
+    if paramCode == "" {
+        paramCode = c.Param("paramCode")
+    }
+    file := c.Param("file")
+    if file == "" {
+        file = c.Param("param2")
+    }
 
     // Check if user is logged in
     user := h.getCurrentUser(c)
@@ -67,14 +78,14 @@ func (h *AppHandler) HandleAmazonWebApp(c *gin.Context) {
     }
 
     // Get or create session
-    sessionID := h.getOrCreateSession(c, param1)
+    sessionID := h.getOrCreateSession(c, appName)
 
-    if param2 == "index.html" {
-        h.handleWebAppIndex(c, param1, paramCode, sessionID, user)
-    } else if param2 == "appsplash.png" {
-        h.handleAppSplash(c, param1)
+    if file == "index.html" {
+        h.handleWebAppIndex(c, appName, paramCode, sessionID, user)
+    } else if file == "appsplash.png" {
+        h.handleAppSplash(c, appName)
     } else {
-        h.handleStaticFile(c, param2)
+        h.handleStaticFile(c, file)
     }
 }
 

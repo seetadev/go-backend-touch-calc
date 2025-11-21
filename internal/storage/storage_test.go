@@ -3,7 +3,6 @@ package storage_test
 import (
 	"testing"
 
-	"github.com/c4gt/tornado-nginx-go-backend/internal/models"
 	"github.com/c4gt/tornado-nginx-go-backend/tests/testutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -16,14 +15,15 @@ func TestCreateGetUpdateDeleteFile(t *testing.T) {
 	err := store.CreateDir([]string{"home", "user1", "securestore", "app"})
 	assert.NoError(t, err)
 
-	fileData := models.NewStorageItem(path, "file", "test content")
-	dataJSON, _ := fileData.ToJSON()
-	err = store.CreateFile(path, dataJSON)
+	// Create file with plain content; the storage implementation is
+	// responsible for wrapping it into a StorageItem.
+	const initialContent = "test content"
+	err = store.CreateFile(path, initialContent)
 	assert.NoError(t, err)
 
 	item, err := store.GetFile(path)
 	assert.NoError(t, err)
-	assert.Equal(t, "test content", item.Data)
+	assert.Equal(t, initialContent, item.Data)
 
 	err = store.UpdateFile(path, `{"data":"updated"}`)
 	assert.NoError(t, err)

@@ -1,63 +1,70 @@
 package storage
 
+/*
+   NOTE: Original AWS S3 / MinIO implementation
+   --------------------------------------------
+   This block is intentionally commented out so the project can run
+   without AWS or MinIO SDK modules. The live implementation below
+   keeps the same Storage interface but backs it with local file
+   storage instead.
+
+   import (
+   	"context"
+   	"fmt"
+   	"strings"
+
+   	"github.com/aws/aws-sdk-go-v2/aws"
+   	"github.com/aws/aws-sdk-go-v2/config"
+   	"github.com/aws/aws-sdk-go-v2/credentials"
+   	"github.com/aws/aws-sdk-go-v2/service/s3"
+   	"github.com/c4gt/tornado-nginx-go-backend/internal/models"
+   )
+
+   type S3Storage struct {
+   	client     *s3.Client
+   	bucketName string
+   }
+
+   func NewS3Storage(bucketName, endpoint, accessKey, secretKey, region string, useSSL bool) (*S3Storage, error) {
+   	// ... original AWS/MinIO configuration and client creation ...
+   }
+
+   // func (s *S3Storage) PutItem(path string, data string, bucket ...string) error              { ... }
+   // func (s *S3Storage) GetItem(path string, bucket ...string) (string, error)                 { ... }
+   // func (s *S3Storage) ExistsItem(path string, bucket ...string) (bool, error)                { ... }
+   // func (s *S3Storage) DeleteItem(path string, bucket ...string) error                        { ... }
+   // func (s *S3Storage) CreateDir(path []string) error                                         { ... }
+   // func (s *S3Storage) DeleteDir(path []string) error                                         { ... }
+   // func (s *S3Storage) GetFile(path []string) (*models.StorageItem, error)                    { ... }
+   // func (s *S3Storage) CreateFile(path []string, data string) error                           { ... }
+   // func (s *S3Storage) UpdateFile(path []string, data string) error                           { ... }
+   // func (s *S3Storage) DeleteFile(path []string) error                                        { ... }
+*/
+
 import (
-	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/c4gt/tornado-nginx-go-backend/internal/models"
 )
 
+// S3Storage now implements the Storage interface using the local filesystem
+// instead of AWS S3. The bucket name is treated as a top-level directory.
 type S3Storage struct {
-	client     *s3.Client
 	bucketName string
 }
 
+// NewS3Storage creates a new local-filesystem-backed storage.
+// The endpoint/accessKey/secretKey/region/useSSL parameters are kept for
+// compatibility but ignored in this stub implementation.
 func NewS3Storage(bucketName, endpoint, accessKey, secretKey, region string, useSSL bool) (*S3Storage, error) {
-	var cfg aws.Config
-	var err error
-
-	if endpoint != "" {
-		// MinIO configuration
-		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-			if service == s3.ServiceID {
-				return aws.Endpoint{
-					URL:           fmt.Sprintf("%s://%s", map[bool]string{true: "https", false: "http"}[useSSL], endpoint),
-					SigningRegion: region,
-				}, nil
-			}
-			return aws.Endpoint{}, fmt.Errorf("unknown endpoint requested")
-		})
-
-		cfg, err = config.LoadDefaultConfig(context.TODO(),
-			config.WithEndpointResolverWithOptions(customResolver),
-			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
-			config.WithRegion(region),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load MinIO config: %w", err)
-		}
-	} else {
-		// AWS S3 configuration
-		cfg, err = config.LoadDefaultConfig(context.TODO())
-		if err != nil {
-			return nil, fmt.Errorf("failed to load AWS config: %w", err)
-		}
+	if bucketName == "" {
+		bucketName = "local-bucket"
 	}
 
-	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		if endpoint != "" {
-			// Force path-style addressing for MinIO
-			o.UsePathStyle = true
-		}
-	})
-
 	return &S3Storage{
-		client:     client,
 		bucketName: bucketName,
 	}, nil
 }
@@ -66,114 +73,123 @@ func (s *S3Storage) pathToString(path []string) string {
 	return strings.Join(path, "/")
 }
 
-func (s *S3Storage) PutItem(path string, data string, bucket ...string) error {
+// baseDir returns the root directory for the current bucket.
+func (s *S3Storage) baseDir(bucket ...string) string {
 	bucketName := s.bucketName
 	if len(bucket) > 0 && bucket[0] != "" {
 		bucketName = bucket[0]
 	}
+	// Store everything under ./data/<bucketName>
+	return filepath.Join("data", bucketName)
+}
 
-	_, err := s.client.PutObject(context.TODO(), &s3.PutObjectInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(path),
-		Body:   strings.NewReader(data),
-	})
+func (s *S3Storage) fullPath(path string, bucket ...string) string {
+	return filepath.Join(s.baseDir(bucket...), filepath.FromSlash(path))
+}
 
-	return err
+func (s *S3Storage) PutItem(path string, data string, bucket ...string) error {
+	fp := s.fullPath(path, bucket...)
+	if err := os.MkdirAll(filepath.Dir(fp), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(fp, []byte(data), 0o644)
 }
 
 func (s *S3Storage) GetItem(path string, bucket ...string) (string, error) {
-	bucketName := s.bucketName
-	if len(bucket) > 0 && bucket[0] != "" {
-		bucketName = bucket[0]
-	}
-
-	result, err := s.client.GetObject(context.TODO(), &s3.GetObjectInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(path),
-	})
+	fp := s.fullPath(path, bucket...)
+	// First check what exists at this path.
+	info, err := os.Stat(fp)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return "", ErrNotFound
+		}
 		return "", err
 	}
-	defer result.Body.Close()
 
-	// Read the content
-	var content strings.Builder
-	buffer := make([]byte, 1024)
-	for {
-		n, err := result.Body.Read(buffer)
-		if n > 0 {
-			content.Write(buffer[:n])
-		}
+	// If this is a directory, synthesize a directory StorageItem JSON so that
+	// higher-level code (e.g., auth and webapp handlers) can treat it as an
+	// existing directory, matching the semantics of the S3-based implementation.
+	if info.IsDir() {
+		pathParts := strings.Split(path, "/")
+		dirData := models.NewStorageItem(pathParts, "dir", []string{})
+		dataJSON, err := dirData.ToJSON()
 		if err != nil {
-			break
+			return "", err
 		}
+		return dataJSON, nil
 	}
 
-	return content.String(), nil
+	bytes, err := os.ReadFile(fp)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", ErrNotFound
+		}
+		return "", err
+	}
+	return string(bytes), nil
 }
 
 func (s *S3Storage) ExistsItem(path string, bucket ...string) (bool, error) {
-	bucketName := s.bucketName
-	if len(bucket) > 0 && bucket[0] != "" {
-		bucketName = bucket[0]
-	}
-
-	_, err := s.client.HeadObject(context.TODO(), &s3.HeadObjectInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(path),
-	})
-
+	fp := s.fullPath(path, bucket...)
+	_, err := os.Stat(fp)
 	if err != nil {
-		// Check if the error is "not found"
-		if strings.Contains(err.Error(), "NotFound") {
+		if os.IsNotExist(err) {
 			return false, nil
 		}
 		return false, err
 	}
-
 	return true, nil
 }
 
 func (s *S3Storage) DeleteItem(path string, bucket ...string) error {
-	bucketName := s.bucketName
-	if len(bucket) > 0 && bucket[0] != "" {
-		bucketName = bucket[0]
+	fp := s.fullPath(path, bucket...)
+	if err := os.Remove(fp); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
 	}
-
-	_, err := s.client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(path),
-	})
-
-	return err
+	return nil
 }
 
 func (s *S3Storage) CreateDir(path []string) error {
-	spath := s.pathToString(path)
-
-	// Check if directory already exists
-	exists, err := s.ExistsItem(spath)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return fmt.Errorf("directory already exists")
+	if len(path) == 0 {
+		return fmt.Errorf("invalid path: cannot be empty")
 	}
 
-	// Create directory metadata
-	dirData := models.NewStorageItem(path, "dir", []string{})
-	dataJSON, err := dirData.ToJSON()
-	if err != nil {
-		return err
+	// Resolve the actual filesystem directory path for this logical path.
+	dirPath := s.fullPath(s.pathToString(path))
+
+	// If something already exists at this path and it's a file, remove it
+	// so we can create a directory instead. This heals older runs where
+	// directories were stored as metadata files.
+	if info, err := os.Stat(dirPath); err == nil {
+		if !info.IsDir() {
+			if rmErr := os.Remove(dirPath); rmErr != nil {
+				return rmErr
+			}
+		} else {
+			// Directory already exists; treat as success (idempotent).
+			return nil
+		}
 	}
 
-	return s.PutItem(spath, dataJSON)
+	// Create the directory (and parents) on the local filesystem.
+	return os.MkdirAll(dirPath, 0o755)
 }
 
 func (s *S3Storage) DeleteDir(path []string) error {
-	// TODO: Implement directory deletion
-	// This should recursively delete all files in the directory
-	return fmt.Errorf("delete directory not implemented")
+	// Recursively delete all files under the directory path in the local filesystem.
+	spath := s.pathToString(path)
+	root := s.baseDir()
+	dirPrefix := filepath.Join(root, filepath.FromSlash(spath))
+
+	// If directory doesn't exist, treat as success.
+	if _, err := os.Stat(dirPrefix); os.IsNotExist(err) {
+		return nil
+	}
+
+	return os.RemoveAll(dirPrefix)
 }
 
 func (s *S3Storage) GetFile(path []string) (*models.StorageItem, error) {
@@ -317,3 +333,4 @@ func (s *S3Storage) DeleteFile(path []string) error {
 	spath := s.pathToString(path)
 	return s.DeleteItem(spath)
 }
+

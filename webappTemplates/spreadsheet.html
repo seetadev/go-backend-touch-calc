@@ -1,0 +1,188 @@
+{{define "title"}}Spreadsheet - {{.fname}}{{end}}
+{{define "header"}}Spreadsheet: {{.fname}}{{end}}
+{{define "content"}}
+<div class="spreadsheet-wrapper">
+    <div id="spreadsheet-container">
+        <div style="padding: 20px; text-align: center; color: #7f8c8d">
+            Loading SocialCalc spreadsheet...
+        </div>
+    </div>
+
+    <div class="status-bar" id="status-bar">
+        Ready - Auto-save enabled (every 30 seconds)
+    </div>
+</div>
+
+<style>
+    .spreadsheet-wrapper {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 12px;
+        width: 100%;
+        overflow-x: auto;
+    }
+    #spreadsheet-container {
+        width: 100% !important;
+        height: 600px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .status-bar {
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #ecf0f1;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #7f8c8d;
+    }
+</style>
+{{end}}
+
+{{define "scripts"}}
+    <!-- Dependencies -->
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/json2.js"></script>
+
+    <!-- SocialCalc Core (order is important) -->
+    <script src="/static/js/socialcalcconstants.js"></script>
+    <script src="/static/js/socialcalcimages.js"></script>
+    <script src="/static/js/socialcalc-3.js"></script>
+    <script src="/static/js/socialcalcspreadsheetcontrol.js"></script>
+    <script src="/static/js/socialcalctableeditor.js"></script>
+    <script src="/static/js/socialcalcworkbook.js"></script>
+    <script src="/static/js/socialcalcworkbookcontrol.js"></script>
+    <script src="/static/js/socialcalcpopup.js"></script>
+    <script src="/static/js/socialcalcviewer.js"></script>
+    <script src="/static/js/socialcalctouch.js"></script>
+
+    <script type="text/javascript">
+      var spreadsheet;
+
+      function updateStatus(message) {
+        var el = document.getElementById("status-bar");
+        if (el) {
+          el.innerHTML = message;
+        }
+        console.log("Status:", message);
+      }
+
+      function initializeSocialCalc() {
+        updateStatus("Initializing SocialCalc...");
+
+        SocialCalc.Constants.defaultImagePrefix = "/static/images/sc-";
+
+        spreadsheet = new SocialCalc.SpreadsheetControl();
+        spreadsheet.InitializeSpreadsheetControl(
+          "spreadsheet-container",
+          0,
+          0,
+          0
+        );
+
+        var initialData = `{{.sheetstr}}`;
+        if (
+          initialData &&
+          initialData.trim() !== "" &&
+          initialData !== "{{.sheetstr}}"
+        ) {
+          try {
+            spreadsheet.sheet.ParseSheetSave(initialData);
+            updateStatus("Initial data loaded.");
+          } catch (e) {
+            console.error("Error parsing sheet data:", e);
+            loadDefaultData();
+          }
+        } else {
+          loadDefaultData();
+        }
+
+        setupAutosave();
+        updateStatus("✅ SocialCalc ready.");
+      }
+
+      function loadDefaultData() {
+        var defaultData = `# SocialCalc Spreadsheet Control Save
+version:1.5
+part:sheet
+cell:A1:v:Welcome to TouchCalc
+sheet:c:10:r:40:tvf:1
+part:end`;
+        try {
+          spreadsheet.sheet.ParseSheetSave(defaultData);
+          updateStatus("Default sheet loaded.");
+        } catch (e) {
+          console.error("Error loading default sheet:", e);
+          updateStatus("Using empty sheet.");
+        }
+      }
+
+      function setupAutosave() {
+        setInterval(function () {
+          if (spreadsheet && spreadsheet.sheet) {
+            var sheetData = SocialCalc.CreateSheetSave(spreadsheet.sheet);
+            saveToServer(sheetData, false);
+          }
+        }, 30000);
+      }
+
+      function manualSave() {
+        if (spreadsheet && spreadsheet.sheet) {
+          var sheetData = SocialCalc.CreateSheetSave(spreadsheet.sheet);
+          saveToServer(sheetData, true);
+        } else {
+          updateStatus("Cannot save - spreadsheet not initialized.");
+        }
+      }
+
+      function saveToServer(data, isManual) {
+        var saveType = isManual ? "Manual" : "Auto";
+        updateStatus(saveType + " save in progress...");
+
+        $.ajax({
+          url: "/iwebapp",
+          method: "POST",
+          data: {
+            action: "save",
+            filename: "{{.fname}}",
+            content: data,
+            sessionid: "{{.sessionid}}",
+          },
+        })
+          .done(function () {
+            updateStatus(
+              "✅ " +
+                saveType +
+                " save at " +
+                new Date().toLocaleTimeString()
+            );
+          })
+          .fail(function (xhr, status, error) {
+            console.error("Save failed:", error);
+            updateStatus("❌ " + saveType + " save failed: " + error);
+          });
+      }
+
+      function checkDependencies() {
+        var missing = [];
+        if (typeof $ === "undefined") missing.push("jQuery");
+        if (typeof JSON === "undefined") missing.push("JSON");
+        if (typeof SocialCalc === "undefined") missing.push("SocialCalc");
+        if (missing.length > 0)
+          throw new Error("Missing dependencies: " + missing.join(", "));
+      }
+
+      $(document).ready(function () {
+        try {
+          checkDependencies();
+          initializeSocialCalc();
+        } catch (error) {
+          console.error("Initialization failed:", error);
+          updateStatus("❌ Failed to load: " + error.message);
+        }
+      });
+    </script>
+{{end}}
+
+
+

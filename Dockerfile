@@ -1,5 +1,6 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+# Use Go 1.22 to satisfy go.mod requirement (go >= 1.22)
+FROM golang:1.22-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -34,8 +35,9 @@ COPY --from=builder /app/main .
 COPY --from=builder /app/web ./web
 COPY --from=builder /app/webappTemplates ./webappTemplates
 
-# Create non-root user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# Create non-root user and ensure it owns /root so templates are readable
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup && \
+    chown -R appuser:appgroup /root
 USER appuser
 
 # Expose port

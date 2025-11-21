@@ -10,13 +10,16 @@ services:
     environment:
       - ENVIRONMENT=development
       - PORT=8080
+      - TEMPLATES_PATH=/root/web/templates
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_REGION=${AWS_REGION:-us-east-1}
       - S3_BUCKET=${S3_BUCKET:-aspiring-cloud-storage}
       - FROM_EMAIL=${FROM_EMAIL:-aspiring.investments@gmail.com}
-      - STORAGE_BACKEND=${STORAGE_BACKEND:-mongodb}
-      - MONGO_URI=${MONGO_URI:-mongodb://mongodb:27017}
+      # Force MongoDB as primary storage backend inside Docker to avoid
+      # local MinIO/S3 filesystem stub issues.
+      - STORAGE_BACKEND=mongodb
+      - MONGO_URI=mongodb://mongodb:27017
       - MONGO_DATABASE=${MONGO_DATABASE:-touchcalc}
       - MYSQL_DSN=${MYSQL_DSN:-root:password@tcp(mysql:3306)/touchcalc}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}

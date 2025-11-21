@@ -28,6 +28,9 @@ type Config struct {
     MinIOSecretKey  string
     MinIOBucket     string
     MinIOSSL        string
+
+	// SQLite database DSN for experimental storage backend.
+	SQLiteDSN      string
 }
 
 func Load() *Config {
@@ -55,6 +58,8 @@ func Load() *Config {
         MinIOSecretKey: getEnv("MINIO_SECRET_KEY", "minioadmin"),
         MinIOBucket:    getEnv("MINIO_BUCKET", "touchcalc-storage"),
         MinIOSSL:       getEnv("MINIO_SSL", "false"),
+
+		SQLiteDSN:      getEnv("SQLITE_DSN", "file:touchcalc.db?_pragma=foreign_keys(1)"),
 	}
 }
 
