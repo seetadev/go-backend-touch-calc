@@ -1,16 +1,16 @@
 package handlers
 
 import (
-    "crypto/rand"
-    "encoding/base64"
-    "encoding/json"
-    "fmt"
-    "io/ioutil"
-    "net/http"
-    "os"
-    "path/filepath"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"path/filepath"
 
-    "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 )
 
 type AppHandler struct {
@@ -108,7 +108,7 @@ func (h *AppHandler) handleWebAppIndex(c *gin.Context, appName, paramCode, sessi
         var err error
         mscData, err = ioutil.ReadFile(mscFile)
         if err != nil {
-            mscData = []byte("A1:Welcome to TouchCalc\nB1:Hello " + user + "\nA2:Start editing here\nB2:Your data auto-saves")
+            mscData = []byte("\n")
         }
     }
 

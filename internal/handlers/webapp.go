@@ -854,12 +854,12 @@ func (h *WebAppHandler) handleSaveGet(c *gin.Context) {
 			fmt.Printf("DEBUG: Failed to create user directory: %v\n", err)
 		}
 		
-		// Create default file
+		// Create default file with minimal SocialCalc data (just a newline, like the Python version)
 		defaultPath := []string{"home", user, "default"}
 		defaultData := map[string]interface{}{
 			"user":  user,
 			"fname": "default",
-			"data":  "A1:Welcome to TouchCalc\nB1:Hello " + user + "\nA2:Start editing here\nB2:Your data auto-saves\n\n",
+			"data":  "\n",
 		}
 		dataJSON, _ := json.Marshal(defaultData)
 		h.handler.Storage.CreateFile(defaultPath, string(dataJSON))

@@ -1,382 +1,218 @@
 {{define "importcollabload.html"}}
-<!DOCTYPE html>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
 <head>
-    <title>TouchCalc - {{.entry.fname}}</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/css/socialcalc.css">
-    <link rel="stylesheet" href="/static/css/screen.css">
-    <script src="/static/js/jquery.min.js"></script>
-    <script src="/static/js/json2.js"></script>
-    <script src="/static/js/socialcalc-3.js"></script>
-    <script src="/static/js/socialcalcconstants.js"></script>
-    <script src="/static/js/socialcalcpopup.js"></script>
-    <script src="/static/js/socialcalcspreadsheetcontrol.js"></script>
-    <script src="/static/js/socialcalctableeditor.js"></script>
-    <script src="/static/js/socialcalcviewer.js"></script>
-    <script src="/static/js/socialcalcworkbook.js"></script>
-    <script src="/static/js/socialcalcworkbookcontrol.js"></script>
-    <style>
-        body { 
-            margin: 0; 
-            padding: 0; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden;
-        }
-        #header { 
-            background: linear-gradient(135deg, #007cba 0%, #005a8b 100%);
-            color: white;
-            padding: 12px 20px; 
-            border-bottom: 1px solid #005a8b;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            z-index: 1000;
-            position: relative;
-        }
-        #header h3 { 
-            margin: 0; 
-            font-size: 18px;
-            font-weight: 500;
-        }
-        .header-buttons { 
-            display: flex; 
-            gap: 8px; 
-        }
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        .btn-primary { 
-            background: #28a745; 
-            color: white; 
-        }
-        .btn-secondary { 
-            background: rgba(255,255,255,0.2); 
-            color: white; 
-            border: 1px solid rgba(255,255,255,0.3);
-        }
-        .btn:hover { 
-            opacity: 0.9; 
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        }
-        #workbookControl { 
-            height: calc(100vh - 65px); 
-            position: relative;
-        }
-        #tableeditor { 
-            height: 100%; 
-            width: 100%;
-        }
-        .status {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 12px 20px;
-            border-radius: 8px;
-            color: white;
-            font-weight: 500;
-            display: none;
-            z-index: 2000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            animation: slideIn 0.3s ease;
-        }
-        .status.success {
-            background: #28a745;
-        }
-        .status.error {
-            background: #dc3545;
-        }
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        .loading {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            text-align: center;
-            z-index: 3000;
-        }
-        .loading.hidden {
-            display: none;
-        }
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #007cba;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>TouchCalc - {{ index .entry "fname" }}</title>
+
+<!-- SocialCalc JS files - load order matters! Constants must come first -->
+<script type="text/javascript" src="/static/js/socialcalcconstants.js"></script>
+<script type="text/javascript" src="/static/js/socialcalc-3.js"></script>
+<script type="text/javascript" src="/static/js/socialcalctouch.js"></script>
+<script type="text/javascript" src="/static/js/socialcalctableeditor.js"></script>
+<script type="text/javascript" src="/static/js/formatnumber2.js"></script>
+<script type="text/javascript" src="/static/js/formula1.js"></script>
+<script type="text/javascript" src="/static/js/socialcalcpopup.js"></script>
+<script type="text/javascript" src="/static/js/socialcalcspreadsheetcontrol.js"></script>
+<script type="text/javascript" src="/static/js/socialcalcworkbook.js"></script>
+<script type="text/javascript" src="/static/js/socialcalcworkbookcontrol.js"></script>
+<script type="text/javascript" src="/static/js/socialcalcimages.js"></script>
+
+<script type="text/javascript" src="/static/js/json2.js"></script>
+<script src="/static/js/jquery.min.js" type="text/javascript"></script>
+
+<style>
+body, td, input, textarea {font-family:verdana,helvetica,sans-serif;font-size:small;}
+.smaller {font-size:smaller;}
+</style>
 </head>
-<body>
-    <div id="header">
-        <h3>📊 {{.entry.fname}} | Session: {{.entry.session}}</h3>
-        <div class="header-buttons">
-            <button class="btn btn-primary" onclick="saveSpreadsheet()">💾 Save</button>
-            <button class="btn btn-secondary" onclick="toggleAutoSave()" id="autoSaveBtn">⏰ Auto-save: ON</button>
-            <button class="btn btn-secondary" onclick="downloadFile()">📥 Download</button>
-            <a href="/save" class="btn btn-secondary">📋 File List</a>
-        </div>
-    </div>
-    
-    <div class="loading" id="loadingIndicator">
-        <div class="spinner"></div>
-        <p>Loading TouchCalc...</p>
-    </div>
-    
-    <div id="workbookControl">
-        <div id="tableeditor"></div>
-    </div>
 
-    <div id="status" class="status"></div>
+<body style="background-color:#FFF;" onresize="spreadsheet.DoOnResize();">
 
-    <script>
-        var spreadsheet;
-        var session = "{{.entry.session}}";
-        var filename = "{{.entry.fname}}";
-        var initialData = `{{.entry.sheetstr}}`;
-        var autoSaveEnabled = true;
-        var autoSaveInterval;
-        var saveInProgress = false;
-        
-        function initializeSpreadsheet() {
-            console.log('Initializing TouchCalc for file:', filename);
-            
-            var div = document.getElementById("tableeditor");
-            if (!div) {
-                console.error("tableeditor div not found");
-                showStatus('Error: Cannot find editor container', true);
-                return;
-            }
-            
-            try {
-                // Initialize SocialCalc
-                spreadsheet = new SocialCalc.SpreadsheetControl();
-                spreadsheet.InitializeSpreadsheetControl(div, 0, 0, 0);
-                
-                // Load initial data if available
-                if (initialData && initialData.trim() && initialData !== "\\n" && initialData !== "\n") {
-                    try {
-                        console.log('Loading initial data...');
-                        spreadsheet.sheet = new SocialCalc.Sheet();
-                        
-                        // Try to parse as SocialCalc save format
-                        if (initialData.indexOf('cell:') > -1 || initialData.indexOf('sheet:') > -1) {
-                            var parts = SocialCalc.ParseSheetSave(initialData);
-                            SocialCalc.SheetLoadFromSave(spreadsheet.sheet, parts);
-                        } else {
-                            // Parse as simple text format
-                            var lines = initialData.split('\n');
-                            for (var i = 0; i < lines.length && i < 100; i++) {
-                                if (lines[i].trim()) {
-                                    var parts = lines[i].split(':');
-                                    if (parts.length >= 2) {
-                                        var coord = parts[0].trim();
-                                        var value = parts.slice(1).join(':').trim();
-                                        if (coord && value) {
-                                            spreadsheet.sheet.cells[coord] = {
-                                                datavalue: value,
-                                                datatype: 't',
-                                                valuetype: 't'
-                                            };
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        
-                        spreadsheet.ExecuteCommand("redisplay", "");
-                        console.log('Initial data loaded successfully');
-                    } catch (e) {
-                        console.error("Error loading initial data:", e);
-                        // Initialize with empty sheet if loading fails
-                        spreadsheet.sheet = new SocialCalc.Sheet();
-                        showStatus('Loaded with empty spreadsheet', false);
-                    }
-                } else {
-                    console.log('No initial data, starting with empty sheet');
-                    spreadsheet.sheet = new SocialCalc.Sheet();
-                }
-                
-                console.log("TouchCalc initialized successfully");
-                showStatus('TouchCalc loaded successfully!', false);
-                
-                // Hide loading indicator
-                document.getElementById('loadingIndicator').classList.add('hidden');
-                
-                // Start auto-save
-                startAutoSave();
-                
-            } catch (e) {
-                console.error("Error initializing TouchCalc:", e);
-                showStatus('Error initializing TouchCalc: ' + e.message, true);
-                document.getElementById('loadingIndicator').classList.add('hidden');
-            }
-        }
-        
-        function saveSpreadsheet() {
-            if (!spreadsheet || !spreadsheet.sheet || saveInProgress) {
-                console.log('Save skipped - spreadsheet not ready or save in progress');
-                return;
-            }
-            
-            saveInProgress = true;
-            console.log('Saving spreadsheet...');
-            
-            try {
-                var savestr = SocialCalc.CreateSheetSave(spreadsheet.sheet);
-                
-                var xhr = new XMLHttpRequest();
-                xhr.open('POST', '/save', true);
-                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-                
-                var params = 'fname=' + encodeURIComponent(filename) + 
-                            '&data=' + encodeURIComponent(savestr);
-                
-                xhr.onreadystatechange = function() {
-                    if (xhr.readyState === 4) {
-                        saveInProgress = false;
-                        if (xhr.status === 200) {
-                            try {
-                                var response = JSON.parse(xhr.responseText);
-                                if (response.result === 'ok') {
-                                    console.log('Spreadsheet saved successfully');
-                                    showStatus('💾 Saved!', false);
-                                } else {
-                                    console.error('Save failed:', response.data);
-                                    showStatus('Save failed: ' + response.data, true);
-                                }
-                            } catch (e) {
-                                console.log('Save completed (non-JSON response)');
-                                showStatus('💾 Saved!', false);
-                            }
-                        } else {
-                            console.error('Save failed with status:', xhr.status);
-                            showStatus('Save failed! Please try again.', true);
-                        }
-                    }
-                };
-                
-                xhr.onerror = function() {
-                    saveInProgress = false;
-                    console.error('Save request failed');
-                    showStatus('Network error during save!', true);
-                };
-                
-                xhr.send(params);
-            } catch (e) {
-                saveInProgress = false;
-                console.error("Error saving spreadsheet:", e);
-                showStatus('Save error: ' + e.message, true);
-            }
-        }
-        
-        function startAutoSave() {
-            if (autoSaveInterval) clearInterval(autoSaveInterval);
-            if (autoSaveEnabled) {
-                autoSaveInterval = setInterval(function() {
-                    if (!saveInProgress) {
-                        saveSpreadsheet();
-                    }
-                }, 30000); // 30 seconds
-                console.log('Auto-save started (30 seconds interval)');
-            }
-        }
-        
-        function toggleAutoSave() {
-            autoSaveEnabled = !autoSaveEnabled;
-            var btn = document.getElementById('autoSaveBtn');
-            if (autoSaveEnabled) {
-                btn.textContent = '⏰ Auto-save: ON';
-                startAutoSave();
-                showStatus('Auto-save enabled', false);
+<h3><a href="/">TouchCalc</a>&nbsp;&nbsp;&nbsp;Editing
+<span id="filenameholder">{{ index .entry "fname" }}</span> in session {{ index .entry "session" }}</h3>
+
+<div id="workbookControl" style="background-color:#80A9F3;">
+</div>
+
+<div style="margin:8px 0px 10px 0px;">
+ <div id="tableeditor" style="margin:8px 0px 10px 0px;">Loading editor</div>
+</div>
+ <div id="msg" onclick="this.innerHTML='&nbsp;';"></div>
+
+<textarea name="savestr" id="sheetdata" style="display:none;">
+{{ index .entry "sheetstr" }}
+</textarea>
+
+<script>
+
+var sheetnamemscedata = "{{ index .entry "sheetmscestr" }}";
+
+SocialCalc.Constants.defaultImagePrefix = "/static/images/sc-";
+SocialCalc.Popup.imagePrefix = "/static/images/sc-";
+
+var spreadsheet = new SocialCalc.SpreadsheetControl();
+
+// setup upload tab
+spreadsheet.tabs.splice(spreadsheet.tabnums.sort, 5);
+
+spreadsheet.tabnums = {};
+for (var i=0; i<spreadsheet.tabs.length; i++) {
+    spreadsheet.tabnums[spreadsheet.tabs[i].name] = i;
+}
+
+// Save tab
+spreadsheet.tabnums["saveas"] = spreadsheet.tabs.length;
+spreadsheet.tabs.push({name: "saveas", text: "Save", html:
+    '<div id="%id.saveastools" style="display:none">'+
+    '<form id="saveas" action="/save" method="post" onsubmit="return savecheck()">'+
+    '<table cellspacing="0" cellpadding="0"><tr><td>'+
+    '<input type="text" id="saveasentry" value="{{ index .entry "fname" }}" onfocus="SocialCalc.CmdGotFocus(this);">'+
+    '</td>'+
+    '<td style="vertical-align:top;padding-right:6px;">'+
+    '<input type="submit" value="SaveAs">'+
+    '</td></tr></table></form></div>',
+    onclickFocus: true
+});
+
+// Import tab
+spreadsheet.tabnums["import"] = spreadsheet.tabs.length;
+spreadsheet.tabs.push({name: "import", text: "Import", html:
+    '<div id="%id.importtools" style="display:none;">'+
+    '<form id="uploadfile" action="/import" method="post" enctype="multipart/form-data" onsubmit="return uploadcheck()" name="uploadfile">'+
+    '<table cellspacing="0" cellpadding="0" style="background-color:#FFF;"><tr><td>'+
+    '<input type="file" id="fileUpload" name="upload">'+
+    '</td>'+
+    '<td style="vertical-align:top;padding-right:6px;">'+
+    '<input type="submit" value="Import">'+
+    '<input type="text" id="ext" name="ext" readonly="readonly" style="display:none;">'+
+    '</td></tr></table></form></div>',
+    onclickFocus: true
+});
+
+// Export tab
+spreadsheet.tabnums["export"] = spreadsheet.tabs.length;
+spreadsheet.tabs.push({name: "export", text: "Export", html:
+    '<div id="%id.exporttools" style="display:none">'+
+    '<form id="downloadfile" action="/downloadfile" method="post" enctype="multipart/form-data" onsubmit="return downloadcheck()">'+
+    '<table cellspacing="0" cellpadding="0"><tr><td>'+
+    '<select id="downloadtype" name="type">'+
+    '<option value="MSCE">MSCE</option>'+
+    '<option value="MSC">MSC</option>'+
+    '<option value="CSV">CSV</option>'+
+    '<option value="HTML">HTML</option>'+
+    '</select>'+
+    '</td>'+
+    '<td style="vertical-align:top;padding-right:6px;">'+
+    '<input type="submit" value="Export">'+
+    '<input type="text" id="downloadcontent" name="content" style="display:none;">'+
+    '</td></tr></table></form></div>',
+    onclickFocus: true
+});
+
+var workbook = new SocialCalc.WorkBook(spreadsheet);
+workbook.InitializeWorkBook("sheet1");
+
+spreadsheet.InitializeSpreadsheetControl("tableeditor");
+spreadsheet.ExecuteCommand('redisplay', '');
+
+var workbookcontrol = new SocialCalc.WorkBookControl(workbook, "workbookControl", "sheet1");
+workbookcontrol.InitializeWorkBookControl();
+
+var fname = '{{ index .entry "fname" }}';
+
+function MyEndsWith(str, suffix) {
+    return str.indexOf(suffix, str.length - suffix.length) !== -1;
+}
+
+if (MyEndsWith(fname, ".msce") || MyEndsWith(fname, ".MSCE")) {
+    SocialCalc.WorkBookControlLoad(decodeURIComponent(sheetnamemscedata));
+} else {
+    SocialCalc.WorkBookControlLoad(document.getElementById("sheetdata").value);
+}
+
+spreadsheet.DoOnResize();
+
+// Save function
+function savecheck() {
+    var savefname = document.getElementById('saveasentry').value;
+    if (savefname == '') { alert('Empty file name'); return false; }
+
+    var message = {};
+    message.fname = savefname;
+    message.data = SocialCalc.WorkBookControlSaveSheet();
+
+    $.ajax({
+        url: '/save',
+        type: 'POST',
+        data: message,
+        success: function(response) {
+            if (response && response.data) {
+                alert(response.data);
             } else {
-                btn.textContent = '⏰ Auto-save: OFF';
-                if (autoSaveInterval) clearInterval(autoSaveInterval);
-                showStatus('Auto-save disabled', false);
+                alert("Saved successfully");
             }
+        },
+        error: function() {
+            alert("Error saving file");
         }
-        
-        function downloadFile() {
-            var form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/downloadfile';
-            
-            var input1 = document.createElement('input');
-            input1.type = 'hidden';
-            input1.name = 'fname';
-            input1.value = filename;
-            
-            var input2 = document.createElement('input');
-            input2.type = 'hidden';
-            input2.name = 'format';
-            input2.value = 'msc';
-            
-            form.appendChild(input1);
-            form.appendChild(input2);
-            document.body.appendChild(form);
-            form.submit();
-            document.body.removeChild(form);
-            
-            showStatus('Download started...', false);
-        }
-        
-        function showStatus(message, isError) {
-            var status = document.getElementById('status');
-            status.textContent = message;
-            status.className = 'status ' + (isError ? 'error' : 'success');
-            status.style.display = 'block';
-            
-            setTimeout(function() {
-                status.style.display = 'none';
-            }, 3000);
-        }
-        
-        // Initialize when page loads
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeSpreadsheet);
-        } else {
-            initializeSpreadsheet();
-        }
-        
-        // Save before page unload
-        window.addEventListener('beforeunload', function(e) {
-            if (spreadsheet && spreadsheet.sheet && !saveInProgress) {
-                saveSpreadsheet();
-            }
-        });
-        
-        // Handle keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 's') {
-                e.preventDefault();
-                saveSpreadsheet();
+    });
+
+    return false;
+}
+
+function uploadcheck() {
+    var file = document.getElementById('fileUpload').value;
+    if (file == "") {
+        alert("You must select a file to upload");
+        return false;
+    }
+    return true;
+}
+
+function downloadcheck() {
+    var ele = document.getElementById('downloadtype');
+    if (ele.selectedIndex == -1) {
+        alert("Please select type for download file");
+        return false;
+    }
+    if (ele.options[ele.selectedIndex].value == "MSCE") {
+        document.getElementById('downloadcontent').value = encodeURIComponent(SocialCalc.WorkBookControlSaveSheet());
+    } else if (ele.options[ele.selectedIndex].value == "HTML") {
+        var control = SocialCalc.GetCurrentWorkBookControl();
+        var html = control.workbook.spreadsheet.CreateSheetHTML();
+        document.getElementById('downloadcontent').value = html;
+    } else {
+        document.getElementById('downloadcontent').value = SocialCalc.WorkBookControlSaveSheet();
+    }
+    return true;
+}
+
+// Auto-save every 60 seconds
+var autoSaveTimer = setInterval(function() {
+    var savefname = '{{ index .entry "fname" }}';
+    if (savefname && savefname !== '') {
+        var message = {};
+        message.fname = savefname;
+        message.data = SocialCalc.WorkBookControlSaveSheet();
+        $.ajax({
+            url: '/save',
+            type: 'POST',
+            data: message,
+            success: function(response) {
+                var msgEl = document.getElementById('msg');
+                if (msgEl) msgEl.innerHTML = 'Auto-saved at ' + new Date().toLocaleTimeString();
+            },
+            error: function() {
+                var msgEl = document.getElementById('msg');
+                if (msgEl) msgEl.innerHTML = 'Auto-save failed';
             }
         });
-    </script>
+    }
+}, 60000);
+
+</script>
+
 </body>
 </html>
 {{end}}

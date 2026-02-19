@@ -35,7 +35,7 @@ func TestRegisterLoginSaveLoad(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/register", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	router.ServeHTTP(w, req)
-	require.Equal(t, 200, w.Code)
+	require.Equal(t, 302, w.Code, "Register should redirect on success")
 
 	// Login
 	w = httptest.NewRecorder()
@@ -43,7 +43,10 @@ func TestRegisterLoginSaveLoad(t *testing.T) {
 	req, _ = http.NewRequest("POST", "/login", body)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	router.ServeHTTP(w, req)
-	require.Equal(t, 200, w.Code)
+	require.Equal(t, 302, w.Code, "Login should redirect on success")
+
+	// Extract cookies from login response to forward in subsequent requests
+	loginCookies := w.Result().Cookies()
 
 	// Save a file
 	saveReq := map[string]string{
@@ -57,6 +60,9 @@ func TestRegisterLoginSaveLoad(t *testing.T) {
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("POST", "/iwebapp", bytes.NewBuffer(saveJSON))
 	req.Header.Set("Content-Type", "application/json")
+	for _, c := range loginCookies {
+		req.AddCookie(c)
+	}
 	router.ServeHTTP(w, req)
 	require.Equal(t, 200, w.Code)
 
@@ -71,6 +77,9 @@ func TestRegisterLoginSaveLoad(t *testing.T) {
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("POST", "/iwebapp", bytes.NewBuffer(loadJSON))
 	req.Header.Set("Content-Type", "application/json")
+	for _, c := range loginCookies {
+		req.AddCookie(c)
+	}
 	router.ServeHTTP(w, req)
 	require.Equal(t, 200, w.Code)
 }
