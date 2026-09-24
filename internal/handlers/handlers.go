@@ -8,6 +8,7 @@ import (
     "github.com/c4gt/tornado-nginx-go-backend/internal/email"
     "github.com/c4gt/tornado-nginx-go-backend/internal/session"
     "github.com/c4gt/tornado-nginx-go-backend/internal/storage"
+    "github.com/c4gt/tornado-nginx-go-backend/pkg/meshkit"
 )
 
 type Handler struct {
@@ -19,6 +20,7 @@ type Handler struct {
     Email   *EmailHandler
     App     *AppHandler
     Dropbox *DropboxHandler
+    Meshkit *MeshkitHandler
 }
 
 func NewHandler(cfg *config.Config) *Handler {
@@ -61,6 +63,10 @@ func NewHandler(cfg *config.Config) *Handler {
     h.Email = NewEmailHandler(h, emailService)
     h.App = NewAppHandler(h)
     h.Dropbox = NewDropboxHandler(h)
+    // Initialize meshkit client
+    meshkitClient := meshkit.NewClient(cfg.MeshkitServiceURL)
+    log.Printf("Meshkit service URL: %s", cfg.MeshkitServiceURL)
+    h.Meshkit = NewMeshkitHandler(h, meshkitClient)
 
     return h
 }

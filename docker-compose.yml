@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   go-backend:
     build:
@@ -24,6 +22,7 @@ services:
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
       - MINIO_BUCKET=${MINIO_BUCKET:-touchcalc-storage}
       - MINIO_SSL=${MINIO_SSL:-false}
+      - MESHKIT_SERVICE_URL=http://meshkit-service:3001
     env_file:
       - .env
     restart: unless-stopped
@@ -34,12 +33,39 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      meshkit-service:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
+
+  meshkit-service:
+    build: ./meshkit-service
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - IPFS_RPC_URL=http://ipfs:5001
+    depends_on:
+      ipfs:
+        condition: service_started
+    restart: unless-stopped
+
+  ipfs:
+    image: ipfs/kubo:v0.29.0
+    container_name: ipfs_host
+    environment:
+      - IPFS_PATH=/data/ipfs
+    ports:
+      - "4001:4001"
+      - "5002:5001"
+      - "8082:8080"
+    volumes:
+      - ipfs_data:/data/ipfs
+    restart: unless-stopped
 
   nginx:
     image: nginx:alpine
@@ -53,6 +79,8 @@ services:
       go-backend:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - default
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
@@ -96,7 +124,7 @@ services:
 
   # MinIO service
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio
     restart: unless-stopped
     ports:
       - "9000:9000"
@@ -117,6 +145,7 @@ volumes:
   mongodb_data:
   mysql_data:
   minio_data:
+  ipfs_data:
 
 networks:
   default:

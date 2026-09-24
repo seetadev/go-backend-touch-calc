@@ -1,0 +1,108 @@
+{
+  "name": "@ipfs-meshkit/meshkit",
+  "version": "1.2.1",
+  "description": "Node.js SDK for Kubo/IPFS — upload, pin, IPNS, local daemon, and multi-node failover.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "browser": {
+        "import": {
+          "types": "./dist/index.browser.d.ts",
+          "default": "./dist/index.browser.js"
+        },
+        "require": {
+          "types": "./dist/index.browser.d.cts",
+          "default": "./dist/index.browser.cjs"
+        }
+      },
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md"
+  ],
+  "workspaces": [
+    "packages/*",
+    "examples/*"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "build:mcp": "npm run build && npm run build -w @ipfs-meshkit/mcp",
+    "publish:meshkit": "npm run build && npm publish",
+    "publish:mcp": "npm run build:mcp && npm publish -w @ipfs-meshkit/mcp",
+    "clean": "rm -rf dist && npm run clean --workspaces --if-present && find packages -name 'tsconfig.tsbuildinfo' -delete 2>/dev/null || true",
+    "prepublishOnly": "npm run build",
+    "test": "npm run test:unit",
+    "test:unit": "vitest run --project unit",
+    "test:unit:watch": "vitest --project unit",
+    "test:unit:coverage": "vitest run --project unit --coverage",
+    "test:integration": "npm run build && vitest run --project integration",
+    "test:all": "npm run build && vitest run",
+    "test:ci": "npm run test:unit:coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IPFS-Meshkit/meshkit0.git"
+  },
+  "keywords": [
+    "ipfs",
+    "kubo",
+    "meshkit",
+    "decentralized-storage",
+    "ipns",
+    "typescript"
+  ],
+  "author": "IPFS Meshkit Contributors",
+  "contributors": [
+    {
+      "name": "Anurag Pandey",
+      "url": "https://github.com/anurag-p6"
+    },
+    {
+      "name": "Manu Sheel Gupta",
+      "url": "https://github.com/seetadev"
+    }
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/IPFS-Meshkit/meshkit0/issues"
+  },
+  "homepage": "https://github.com/IPFS-Meshkit/meshkit0#readme",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@noble/ciphers": "^2.2.0",
+    "@noble/hashes": "^2.2.0",
+    "aws4fetch": "^1.0.20",
+    "kubo-rpc-client": "^7.1.0",
+    "multiformats": "^14.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "@vitest/coverage-v8": "^4.1.10",
+    "tsup": "^8.5.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "esbuild": ">=0.28.1"
+  }
+}

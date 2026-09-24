@@ -143,6 +143,9 @@ func setupRoutes(router *gin.Engine, handler *handlers.Handler) {
 		// Email routes
 		api.POST("/irunasemailer", handler.Email.HandleRunAsEmail)
 
+		// Storage API routes
+		api.POST("/api/storage/upload", handler.Meshkit.HandleUpload)
+
 		// Browser/app routes (existing)
 		api.GET("/browser", handler.App.HandleLanding)
 		api.GET("/browser/:param1/:paramCode/:param2", handler.App.HandleAmazonWebApp)

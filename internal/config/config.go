@@ -28,6 +28,7 @@ type Config struct {
     MinIOSecretKey  string
     MinIOBucket     string
     MinIOSSL        string
+	MeshkitServiceURL string
 }
 
 func Load() *Config {
@@ -55,6 +56,7 @@ func Load() *Config {
         MinIOSecretKey: getEnv("MINIO_SECRET_KEY", "minioadmin"),
         MinIOBucket:    getEnv("MINIO_BUCKET", "touchcalc-storage"),
         MinIOSSL:       getEnv("MINIO_SSL", "false"),
+        MeshkitServiceURL: getEnv("MESHKIT_SERVICE_URL", "http://localhost:3001"),
 	}
 }
 
