@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"html/template"
 	"log"
 	"net/http"
@@ -28,6 +27,9 @@ func main() {
 
 	// Load configuration
 	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("Invalid configuration: %v", err)
+	}
 
 	// Debug: Print configuration
 	log.Printf("Storage backend: %s", cfg.StorageBackend)
@@ -106,8 +108,7 @@ func setupRoutes(router *gin.Engine, handler *handlers.Handler) {
 	{
 		// Home route - matches Flask behavior exactly
 		api.GET("/", func(c *gin.Context) {
-			user := getCurrentUser(c)
-			if user == "" {
+			if handler.CurrentUser(c) == "" {
 				c.Redirect(http.StatusFound, "/login")
 			} else {
 				c.Redirect(http.StatusFound, "/save")
@@ -150,24 +151,4 @@ func setupRoutes(router *gin.Engine, handler *handlers.Handler) {
 		api.POST("/browser/:param1/dropbox", handler.Dropbox.HandleDropboxPost)
 		api.GET("/browser/static/*filepath", handler.App.HandleGoogleVerification)
 	}
-}
-
-// Helper function to get current user from cookie
-func getCurrentUser(c *gin.Context) string {
-	userCookie, err := c.Cookie("user")
-	if err != nil {
-		return ""
-	}
-	// Handle both JSON format and plain text format
-	if len(userCookie) > 0 && userCookie[0] == '"' && userCookie[len(userCookie)-1] == '"' {
-		// JSON format
-		var user string
-		err = json.Unmarshal([]byte(userCookie), &user)
-		if err != nil {
-			return ""
-		}
-		return user
-	}
-	// Plain text format
-	return userCookie
 }

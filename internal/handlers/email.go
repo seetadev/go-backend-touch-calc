@@ -1,7 +1,6 @@
 package handlers
 
 import (
-    "encoding/json"
     "net/http"
 
     "github.com/c4gt/tornado-nginx-go-backend/internal/email"
@@ -84,16 +83,5 @@ func (h *EmailHandler) HandleRunAsEmail(c *gin.Context) {
 }
 
 func (h *EmailHandler) getCurrentUser(c *gin.Context) string {
-    userCookie, err := c.Cookie("user")
-    if err != nil {
-        return ""
-    }
-
-    var user string
-    err = json.Unmarshal([]byte(userCookie), &user)
-    if err != nil {
-        return ""
-    }
-
-    return user
+    return h.handler.CurrentUser(c)
 }
