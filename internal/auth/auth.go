@@ -182,5 +182,19 @@ func (s *Service) setUser(user *models.User) error {
 
 // ValidateEmail performs basic email validation
 func ValidateEmail(email string) bool {
-	return strings.Contains(email, "@") && len(email) > 3
+	at := strings.Index(email, "@")
+	if at <= 0 || at == len(email)-1 {
+		return false
+	}
+	// The address becomes part of storage paths, so reject separators and
+	// whitespace/control characters as well as a second @.
+	if strings.Contains(email[at+1:], "@") || strings.ContainsAny(email, "/\\ ") {
+		return false
+	}
+	for _, r := range email {
+		if r < 0x20 || r == 0x7f {
+			return false
+		}
+	}
+	return true
 }

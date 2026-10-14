@@ -5,8 +5,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/c4gt/tornado-nginx-go-backend/internal/auth"
 	"github.com/c4gt/tornado-nginx-go-backend/internal/config"
 	"github.com/c4gt/tornado-nginx-go-backend/internal/handlers"
+	"github.com/c4gt/tornado-nginx-go-backend/internal/session"
 	"github.com/c4gt/tornado-nginx-go-backend/pkg/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
@@ -24,12 +26,14 @@ func SetupTestServer(t *testing.T) (*gin.Engine, *handlers.Handler) {
 	router.Use(middleware.CORS(), middleware.Logger(), middleware.Recovery())
 
 	// Use mock storage
+	store := NewMockStorage()
 	h := &handlers.Handler{
 		Config:  cfg,
-		Storage: NewMockStorage(),
+		Storage: store,
+		Session: session.NewManager(),
 	}
 
-	h.Auth = handlers.NewAuthHandler(h, nil)
+	h.Auth = handlers.NewAuthHandler(h, auth.NewService(store))
 	h.WebApp = handlers.NewWebAppHandler(h)
 	h.App = handlers.NewAppHandler(h)
 
