@@ -1,14 +1,24 @@
 package handlers
 
 import (
+    "crypto/rand"
+    "encoding/base64"
     "log"
+    "net/http"
+    "sync"
+    "time"
 
     "github.com/c4gt/tornado-nginx-go-backend/internal/auth"
+    "github.com/c4gt/tornado-nginx-go-backend/internal/authcookie"
     "github.com/c4gt/tornado-nginx-go-backend/internal/config"
     "github.com/c4gt/tornado-nginx-go-backend/internal/email"
     "github.com/c4gt/tornado-nginx-go-backend/internal/session"
     "github.com/c4gt/tornado-nginx-go-backend/internal/storage"
+    "github.com/gin-gonic/gin"
 )
+
+// loginTTL is how long a login cookie stays valid.
+const loginTTL = 24 * time.Hour
 
 type Handler struct {
     Config  *config.Config
@@ -19,6 +29,54 @@ type Handler struct {
     Email   *EmailHandler
     App     *AppHandler
     Dropbox *DropboxHandler
+
+    signerOnce sync.Once
+    signer     *authcookie.Signer
+}
+
+// Signer returns the signer for login cookies, keyed with Config.CookieSecret.
+// Without a configured secret (only allowed outside production) it uses a random
+// per-process key, so logins do not survive a restart.
+func (h *Handler) Signer() *authcookie.Signer {
+    h.signerOnce.Do(func() {
+        secret := h.Config.CookieSecret
+        if secret == "" {
+            buf := make([]byte, 32)
+            if _, err := rand.Read(buf); err != nil {
+                log.Fatalf("cannot generate a cookie secret: %v", err)
+            }
+            secret = base64.StdEncoding.EncodeToString(buf)
+            log.Println("COOKIE_SECRET is not set; using a temporary secret, logins reset on restart")
+        }
+        h.signer = authcookie.NewSigner(secret, loginTTL)
+    })
+    return h.signer
+}
+
+// CurrentUser returns the logged-in user from the signed login cookie, or ""
+// if there is none or it is invalid or expired.
+func (h *Handler) CurrentUser(c *gin.Context) string {
+    value, err := c.Cookie(authcookie.Name)
+    if err != nil {
+        return ""
+    }
+    user, ok := h.Signer().Verify(value)
+    if !ok {
+        return ""
+    }
+    return user
+}
+
+// SetUserCookie logs user in by setting the signed login cookie.
+func (h *Handler) SetUserCookie(c *gin.Context, user string) {
+    c.SetSameSite(http.SameSiteLaxMode)
+    c.SetCookie(authcookie.Name, h.Signer().Sign(user), int(loginTTL.Seconds()), "/", "", h.Config.SecureCookies(), true)
+}
+
+// ClearUserCookie removes the login cookie.
+func (h *Handler) ClearUserCookie(c *gin.Context) {
+    c.SetSameSite(http.SameSiteLaxMode)
+    c.SetCookie(authcookie.Name, "", -1, "/", "", h.Config.SecureCookies(), true)
 }
 
 func NewHandler(cfg *config.Config) *Handler {

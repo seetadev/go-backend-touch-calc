@@ -1,8 +1,16 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"strings"
 )
+
+// leakedCookieSecret was the default COOKIE_SECRET in earlier versions and is
+// published in the repository history, so it must never be used to sign.
+const leakedCookieSecret = "11oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo="
+
+const minCookieSecretLen = 32
 
 type Config struct {
 	Environment     string
@@ -34,7 +42,7 @@ func Load() *Config {
 	return &Config{
 		Environment:     getEnv("ENVIRONMENT", "development"),
 		Port:           getEnv("PORT", "8080"),
-		CookieSecret:   getEnv("COOKIE_SECRET", "11oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo="),
+		CookieSecret:   getEnv("COOKIE_SECRET", ""),
 		AWSAccessKey:   getEnv("AWS_ACCESS_KEY_ID", ""),
 		AWSSecretKey:   getEnv("AWS_SECRET_ACCESS_KEY", ""),
 		AWSRegion:      getEnv("AWS_REGION", "us-east-1"),
@@ -56,6 +64,37 @@ func Load() *Config {
         MinIOBucket:    getEnv("MINIO_BUCKET", "touchcalc-storage"),
         MinIOSSL:       getEnv("MINIO_SSL", "false"),
 	}
+}
+
+// IsProduction reports whether the server runs in production mode.
+func (c *Config) IsProduction() bool {
+	return strings.EqualFold(c.Environment, "production")
+}
+
+// SecureCookies reports whether cookies get the Secure attribute. They always
+// do, except in development and test where the server is usually plain HTTP.
+func (c *Config) SecureCookies() bool {
+	switch strings.ToLower(c.Environment) {
+	case "development", "dev", "test", "":
+		return false
+	}
+	return true
+}
+
+// Validate checks the settings the server cannot safely start without.
+func (c *Config) Validate() error {
+	if !c.IsProduction() {
+		return nil
+	}
+	switch {
+	case c.CookieSecret == "":
+		return fmt.Errorf("COOKIE_SECRET must be set in production")
+	case c.CookieSecret == leakedCookieSecret:
+		return fmt.Errorf("COOKIE_SECRET is the publicly known example value; generate a new one")
+	case len(c.CookieSecret) < minCookieSecretLen:
+		return fmt.Errorf("COOKIE_SECRET must be at least %d characters", minCookieSecretLen)
+	}
+	return nil
 }
 
 func getEnv(key, defaultValue string) string {

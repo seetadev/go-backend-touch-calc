@@ -54,12 +54,12 @@ func Recovery() gin.HandlerFunc {
 	})
 }
 
-// Authentication middleware checks for valid user session
-func Authentication() gin.HandlerFunc {
+// Authentication middleware checks for valid user session. currentUser
+// returns the verified user for the request, or "" if there is none.
+func Authentication(currentUser func(*gin.Context) string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get user from cookie or session
-		user, err := c.Cookie("user")
-		if err != nil || user == "" {
+		user := currentUser(c)
+		if user == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 			c.Abort()
 			return

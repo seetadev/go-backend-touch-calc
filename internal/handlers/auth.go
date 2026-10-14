@@ -3,7 +3,6 @@ package handlers
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -268,7 +267,7 @@ func (h *AuthHandler) handleRegister(c *gin.Context, email, password string) {
 
 func (h *AuthHandler) clearCurrentUser(c *gin.Context) {
     fmt.Printf("DEBUG: Clearing user cookies\n")
-    c.SetCookie("user", "", -1, "/", "", false, true)
+    h.handler.ClearUserCookie(c)
     c.SetCookie("session", "", -1, "/", "", false, true)
 }
 
@@ -396,9 +395,7 @@ func (h *AuthHandler) HandleLostPassword(c *gin.Context) {
 func (h *AuthHandler) setCurrentUser(c *gin.Context, user string) {
     fmt.Printf("DEBUG: Setting current user: '%s'\n", user)
     
-    // Store email directly as cookie value
-    c.SetSameSite(http.SameSiteStrictMode)
-    c.SetCookie("user", user, 3600*24, "/", "", false, true)
+    h.handler.SetUserCookie(c, user)
     
     fmt.Printf("DEBUG: User cookie set successfully\n")
 }
@@ -436,24 +433,6 @@ func (h *AuthHandler) HandleRegisterGet(c *gin.Context) {
     })
 }
 
-// Update getCurrentUser with debugging
 func (h *AuthHandler) getCurrentUser(c *gin.Context) string {
-    userCookie, err := c.Cookie("user")
-    if err != nil {
-        return ""
-    }
-
-    // Handle both JSON format and plain text format
-    if len(userCookie) > 0 && userCookie[0] == '"' && userCookie[len(userCookie)-1] == '"' {
-        // JSON format
-        var user string
-        err = json.Unmarshal([]byte(userCookie), &user)
-        if err != nil {
-            return ""
-        }
-        return user
-    }
-    
-    // Plain text format
-    return userCookie
+    return h.handler.CurrentUser(c)
 }

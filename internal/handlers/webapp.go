@@ -626,24 +626,7 @@ func getCurrentTimestamp() int64 {
 }
 
 func (h *WebAppHandler) getCurrentUser(c *gin.Context) string {
-    userCookie, err := c.Cookie("user")
-    if err != nil {
-        return ""
-    }
-
-    // Handle both JSON format and plain text format
-    if len(userCookie) > 0 && userCookie[0] == '"' && userCookie[len(userCookie)-1] == '"' {
-        // JSON format
-        var user string
-        err = json.Unmarshal([]byte(userCookie), &user)
-        if err != nil {
-            return ""
-        }
-        return user
-    }
-    
-    // Plain text format
-    return userCookie
+    return h.handler.CurrentUser(c)
 }
 
 // handleSocialCalcSave handles save requests from SocialCalc spreadsheet
