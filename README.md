@@ -111,7 +111,7 @@ For production deployment, use the included nginx configuration with proper SSL 
 - `POST /pwreset` - Process password reset
 
 ### Web Applications
-- `POST /iwebapp` - Web application operations (save/load/list files)
+- `POST /webapp` - Web application operations (save/load/list files); `/iwebapp` redirects here
 - `GET /browser/:app/:code/:file` - Access web applications
 - `GET /browser` - Landing page
 

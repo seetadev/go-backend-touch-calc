@@ -205,7 +205,7 @@ part:end`;
         var saveType = isManual ? "Manual" : "Auto";
         updateStatus(saveType + " save in progress...");
         $.ajax({
-          url: "/iwebapp",
+          url: "/webapp",
           method: "POST",
           data: {
             action: "save",
