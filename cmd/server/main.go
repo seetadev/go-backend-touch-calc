@@ -137,8 +137,13 @@ func setupRoutes(router *gin.Engine, handler *handlers.Handler) {
 		api.GET("/htmltopdf", handler.WebApp.HandleHTMLToPDFGet)
 		api.POST("/htmltopdf", handler.WebApp.HandleHTMLToPDFPost)
 
-		// Existing web app routes
-		api.POST("/iwebapp", handler.WebApp.HandleWebApp)
+		// Web app routes. The Tornado backend and its clients use /webapp;
+		// /iwebapp is the former name, kept as a redirect for deployed callers.
+		// 307 preserves the method and body of the POST.
+		api.POST("/webapp", handler.WebApp.HandleWebApp)
+		api.POST("/iwebapp", func(c *gin.Context) {
+			c.Redirect(http.StatusTemporaryRedirect, "/webapp")
+		})
 
 		// Email routes
 		api.POST("/irunasemailer", handler.Email.HandleRunAsEmail)
