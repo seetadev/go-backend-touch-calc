@@ -175,6 +175,11 @@ func TestValidateEmail(t *testing.T) {
 		{"user@", false},
 		{"", false},
 		{"a@b", true}, // minimal valid email
+		{"a@b@c", false},
+		{"a b@example.com", false},
+		{"a@exa\nmple.com", false},
+		{"../x@example.com", false},
+		{"x@example.com/../..", false},
 	}
 
 	for _, test := range tests {
