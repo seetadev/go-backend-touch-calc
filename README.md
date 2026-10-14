@@ -118,6 +118,10 @@ For production deployment, use the included nginx configuration with proper SSL 
 ### Email
 - `POST /irunasemailer` - Send emails via SES
 
+### Spreadsheet import and export
+- `POST /import` (multipart field `upload`) - Import `.xlsx`, `.xls` (Excel 97-2003), `.csv`/`.tsv` or SocialCalc (`.msc`) files. Excel and CSV files are converted to the SocialCalc multi-sheet save format (all sheets, text, numbers, formulas, number formats and merged cells; formulas in `.xls` files are imported as their last calculated value). Uploads are limited to 25 MB.
+- `POST /downloadfile` (form fields `fname`, `format` = `xlsx`, `csv` or `msc`, optional `sheet` for CSV) - Export a saved sheet as a real `.xlsx` workbook, a UTF-8 CSV file of one sheet (the current sheet unless `sheet` names another), or the stored SocialCalc data.
+
 ### Dropbox Integration
 - `GET /browser/:app/dropbox` - Dropbox OAuth operations
 - `POST /browser/:app/dropbox` - Dropbox file operations
